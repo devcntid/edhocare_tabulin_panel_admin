@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Baby, BedDouble, Building2, Bell, CalendarClock, ChevronRight, ClipboardList, CreditCard, FileText, History, LayoutDashboard, ListChecks, Menu, Plug, ReceiptText, Settings, UserRound, Users, Wallet, X } from "lucide-react";
+import { Baby, BedDouble, Building2, Bell, CalendarClock, ChevronRight, ClipboardList, CreditCard, FileText, History, LayoutDashboard, ListChecks, Menu, PanelLeftClose, PanelLeftOpen, Plug, ReceiptText, Settings, UserRound, Users, Wallet, X } from "lucide-react";
 import { can, PERAN_LABEL } from "@/lib/permissions";
 import type { Pengguna } from "@/lib/session";
 import { LogoutButton } from "@/components/logout-button";
@@ -63,7 +63,8 @@ function jejak(path: string): { label: string; href?: string }[] {
   return out;
 }
 
-function Nav({ user, path }: { user: Pengguna; path: string }) {
+/** `ciut`: icon-only rail on desktop (md and up). The mobile drawer always shows full labels. */
+function Nav({ user, path, ciut }: { user: Pengguna; path: string; ciut: boolean }) {
   return (
     <nav aria-label="Menu utama" className="flex-1 space-y-4 overflow-y-auto px-2 pb-3">
       {SECTIONS.map((sec) => {
@@ -71,11 +72,12 @@ function Nav({ user, path }: { user: Pengguna; path: string }) {
         if (!items.length) return null;
         return (
           <div key={sec.title} className="space-y-1">
-            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">{sec.title}</div>
+            <div className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/75 ${ciut ? "md:hidden" : ""}`}>{sec.title}</div>
+            {ciut && <div aria-hidden className="mx-2 hidden border-t border-black/15 md:block" />}
             {items.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} aria-current={aktif(path, href) ? "page" : undefined}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-semibold hover:bg-white/15 ${aktif(path, href) ? "bg-white/20" : ""}`}>
-                <Icon size={16} /> {label}
+              <Link key={href} href={href} title={ciut ? label : undefined} aria-current={aktif(path, href) ? "page" : undefined}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-semibold hover:bg-white/10 ${ciut ? "md:justify-center md:px-0" : ""} ${aktif(path, href) ? "bg-white/20 shadow-[inset_3px_0_0_var(--sekunder)]" : ""}`}>
+                <Icon size={16} className="shrink-0" /> <span className={ciut ? "md:sr-only" : ""}>{label}</span>
               </Link>
             ))}
           </div>
@@ -88,21 +90,36 @@ function Nav({ user, path }: { user: Pengguna; path: string }) {
 export function AppShell({ user, children }: { user: Pengguna; children: React.ReactNode }) {
   const path = usePathname();
   const [buka, setBuka] = useState(false);
+  const [ciut, setCiut] = useState(false);
   useEffect(() => setBuka(false), [path]);
+  // remembered per browser; read after mount so the server render and first client render match
+  useEffect(() => {
+    try { setCiut(localStorage.getItem("sidebar-ciut") === "1"); } catch { /* storage blocked: stay expanded */ }
+  }, []);
+  const ubahCiut = () => {
+    setCiut((c) => {
+      try { localStorage.setItem("sidebar-ciut", c ? "0" : "1"); } catch { /* not persisted */ }
+      return !c;
+    });
+  };
   const crumbs = jejak(path);
 
   return (
     <div className="min-h-screen md:flex">
       {buka && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setBuka(false)} aria-hidden />}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-[var(--primary)] text-white transition-transform md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 ${buka ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between px-4 py-4">
-          <div className="text-lg font-bold">Tabulin Admin</div>
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-[var(--primary)] text-white transition-[transform,width] md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 ${ciut ? "md:w-16" : ""} ${buka ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className={`flex items-center justify-between px-4 py-4 ${ciut ? "md:justify-center md:px-0" : ""}`}>
+          <div className={`text-lg font-bold ${ciut ? "md:hidden" : ""}`}>Tabulin Admin</div>
           <button className="md:hidden" aria-label="Tutup menu" onClick={() => setBuka(false)}><X size={20} /></button>
+          <button className="hidden rounded-lg p-1 hover:bg-white/10 md:inline-flex" aria-label={ciut ? "Perluas menu samping" : "Ciutkan menu samping"} aria-expanded={!ciut} onClick={ubahCiut}>
+            {ciut ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          </button>
         </div>
-        <Nav user={user} path={path} />
+        <Nav user={user} path={path} ciut={ciut} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-[#e5e7eb] bg-white px-4 md:px-6">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,var(--biru-merek),var(--accent),var(--pink-merek))]" />
           <button className="md:hidden" aria-label="Buka menu" aria-expanded={buka} onClick={() => setBuka(true)}><Menu size={20} /></button>
           <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
             <ol className="flex items-center gap-1 overflow-hidden whitespace-nowrap text-[13px] text-[#666]">
