@@ -9,7 +9,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const q = one(sp.q) ?? "";
   const data = await daftarPasien({ q, page: pageNum(sp.page) });
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="pasien"
       judul="Pasien" desc="Data pasien berasal dari aplikasi/API dan tidak dapat diubah di panel. Pasien dikelompokkan menurut No. RM."
       basis="/pasien" cari="Cari nama, No. RM, No. HP" params={{ q }} data={data} kunci={(p) => p.no_rm}
       kolom={[

@@ -11,7 +11,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const hasil = one(sp.hasil) ?? "";
   const data = await daftarLogApi({ q, hasil, page: pageNum(sp.page) });
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="log-api"
       judul="Log setoran API"
       desc="Setiap laporan setoran dari bank/aplikasi dicatat di sini, termasuk yang ditolak. Duplikat (referensi sama) tidak dicatat dua kali di buku besar."
       basis="/log-api" cari="Cari no. VA, referensi, no. transaksi" params={{ q, hasil }} data={data} kunci={(l) => l.id}

@@ -11,7 +11,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const status = one(sp.status) ?? "";
   const data = await daftarJadwal({ q, status, page: pageNum(sp.page) });
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="jadwal-cicilan"
       judul="Jadwal cicilan"
       desc="Seluruh termin cicilan peserta menurut tanggal jatuh tempo. Jadwal dibuat otomatis saat tagihan DP terbit; tagihan tiap termin diterbitkan dari halaman detail pendaftaran."
       basis="/jadwal-cicilan" cari="Cari peserta, no. pendaftaran, no. tagihan" params={{ q, status }} data={data} kunci={(j) => j.id}

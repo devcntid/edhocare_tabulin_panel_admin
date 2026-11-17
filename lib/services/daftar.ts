@@ -1,8 +1,10 @@
 /** Shared building blocks for server-side list queries (search + filter + pagination). New list endpoints should use these instead of re-writing them. */
 import { pool } from "@/lib/db";
-import { PAGE_SIZE } from "@/lib/services/pendaftaran";
+import { EKSPOR_MAKS, PAGE_SIZE } from "@/lib/services/pendaftaran";
 
-export function paging(page: number | undefined) {
+/** `semua` (exports) ignores the page and returns up to EKSPOR_MAKS rows from the start. */
+export function paging(page: number | undefined, semua = false) {
+  if (semua) return { p: 1, limit: EKSPOR_MAKS, offset: 0 };
   const p = Math.max(1, page ?? 1);
   return { p, limit: PAGE_SIZE, offset: (p - 1) * PAGE_SIZE };
 }
@@ -42,8 +44,8 @@ export type Halaman<T> = { rows: T[]; total: number; page: number; pages: number
  * One page of a list. `dari` is everything after FROM (joins and the WHERE built with `klausa`),
  * `args` the parameters collected by `cari`/`pilih`, `pilihan` the SELECT list, `urut` the ORDER BY.
  */
-export async function ambilHalaman<T>(o: { dari: string; args: unknown[]; pilihan: string; urut: string; page?: number }): Promise<Halaman<T>> {
-  const { p, limit, offset } = paging(o.page);
+export async function ambilHalaman<T>(o: { dari: string; args: unknown[]; pilihan: string; urut: string; page?: number; semua?: boolean }): Promise<Halaman<T>> {
+  const { p, limit, offset } = paging(o.page, o.semua);
   const total = (await pool.query(`SELECT count(*)::int AS n FROM ${o.dari}`, o.args)).rows[0].n as number;
   const { rows } = await pool.query(`SELECT ${o.pilihan} FROM ${o.dari} ORDER BY ${o.urut} LIMIT ${limit} OFFSET ${offset}`, o.args);
   return { rows: rows as T[], total, page: p, pages: pages(total) };

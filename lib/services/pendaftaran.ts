@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool } from "@/lib/db";
 import { ApiError } from "@/lib/api";
@@ -6,14 +7,18 @@ import { badgeInfo, daysBetween, hitungPaket, nominalTagihan, periodeDefault, pe
 
 export const STATUS = ["menunggu_verifikasi", "va_disiapkan", "aktif", "selesai", "ditolak", "kedaluwarsa"] as const;
 export const PAGE_SIZE = 15;
+/** Row cap of one export file. */
+export const EKSPOR_MAKS = 10_000;
 
 export type Ringkas = {
   id: number; nomor: string; nama: string; no_rm: string; no_hp: string; status_pendaftaran: (typeof STATUS)[number];
   faskes: string; kelas_kamar: string; cara_persalinan: string; saldo: number; progres_ke_50: number; dibuat_pada: string;
 };
 
-export async function daftar(opts: { q?: string; status?: string; page?: number }) {
+export async function daftar(opts: { q?: string; status?: string; page?: number; semua?: boolean }) {
   const page = Math.max(1, opts.page ?? 1);
+  const limit = opts.semua ? EKSPOR_MAKS : PAGE_SIZE;
+  const offset = opts.semua ? 0 : (page - 1) * PAGE_SIZE;
   const where: string[] = [];
   const args: unknown[] = [];
   if (opts.q?.trim()) {
@@ -29,7 +34,7 @@ export async function daftar(opts: { q?: string; status?: string; page?: number 
   const total = (await pool.query(`SELECT count(*)::int AS n ${from}`, args)).rows[0].n as number;
   const { rows } = await pool.query(
     `SELECT v.id, v.nomor, v.nama, v.no_rm, v.no_hp, v.status_pendaftaran, f.nama AS faskes, k.kelas_kamar, k.cara_persalinan,
-            v.saldo, v.progres_ke_50, v.dibuat_pada ${from} ORDER BY v.id DESC LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}`,
+            v.saldo, v.progres_ke_50, v.dibuat_pada ${from} ORDER BY v.id DESC LIMIT ${limit} OFFSET ${offset}`,
     args,
   );
   return { rows: rows as Ringkas[], total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
@@ -108,7 +113,8 @@ export const buatSchema = z.object({
   hpht: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Field ini wajib diisi."),
 });
 
-export async function buat(input: z.infer<typeof buatSchema>, adminId: number) {
+/** Everything `buat` checks and computes before the INSERT. Shared with the CSV import, which validates a whole file before writing any row. */
+export async function siapkan(input: z.infer<typeof buatSchema>) {
   const cfg = await konfig();
   const hariIni = await today();
   cekHpht(input.hpht, hariIni, cfg.batasUsia);
@@ -132,22 +138,44 @@ export async function buat(input: z.infer<typeof buatSchema>, adminId: number) {
   if (per < Number(pk.setoran_min_bulanan)) {
     throw new ApiError(422, "VALIDASI", "Data tidak valid.", { jumlah_cicilan: `Cicilan Rp${new Intl.NumberFormat("id-ID").format(per)} di bawah setoran minimum paket Rp${new Intl.NumberFormat("id-ID").format(Number(pk.setoran_min_bulanan))}. Kurangi jumlah cicilan.` });
   }
-  const c = await pool.connect();
+  return { input, pasien, paketId: paket.id as number, pk, n };
+}
+
+export type Siap = Awaited<ReturnType<typeof siapkan>>;
+
+/** Writes one prepared registration inside the caller's transaction. */
+export async function sisip(c: PoolClient, p: Siap, adminId: number) {
+  const { input, pasien, pk, n } = p;
   try {
-    await c.query("BEGIN");
+    // savepoint: a failed INSERT must not abort the caller's whole transaction before it can report which row failed
+    await c.query("SAVEPOINT sisip_pendaftaran");
     const { rows } = await c.query(
       `INSERT INTO pendaftaran (nama, no_rm, no_hp, faskes_id, paket_id, jumlah_cicilan, hpht, tanggal_milestone, perkiraan_hpl, tarif_total, dp, target_50, setoran_min_bulanan)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
-      [pasien.nama, input.no_rm, pasien.no_hp, input.faskes_id, paket.id, input.jumlah_cicilan, input.hpht,
+      [pasien.nama, input.no_rm, pasien.no_hp, input.faskes_id, p.paketId, input.jumlah_cicilan, input.hpht,
        n.tanggal_milestone, n.perkiraan_hpl, pk.tarif_total, n.dp, n.target_50, pk.setoran_min_bulanan],
     );
     await c.query("SELECT catat_audit($1,'buat','pendaftaran',$2,NULL,$3)", [adminId, rows[0].id, JSON.stringify({ nama: pasien.nama, no_rm: input.no_rm })]);
-    await c.query("COMMIT");
-    return { id: rows[0].id as number };
+    await c.query("RELEASE SAVEPOINT sisip_pendaftaran");
+    return rows[0].id as number;
   } catch (e) {
-    await c.query("ROLLBACK");
+    await c.query("ROLLBACK TO SAVEPOINT sisip_pendaftaran");
     if ((e as { code?: string }).code === "23505") throw new ApiError(409, "DUPLIKAT", "No. RM ini sudah memiliki pendaftaran yang berjalan.", { no_rm: "Sudah terdaftar." });
     if ((e as { code?: string }).code === "23503") throw new ApiError(422, "VALIDASI", "Data tidak valid.", { faskes_id: "Faskes tidak ditemukan." });
+    throw e;
+  }
+}
+
+export async function buat(input: z.infer<typeof buatSchema>, adminId: number) {
+  const siap = await siapkan(input);
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const id = await sisip(c, siap, adminId);
+    await c.query("COMMIT");
+    return { id };
+  } catch (e) {
+    await c.query("ROLLBACK");
     throw e;
   } finally {
     c.release();
