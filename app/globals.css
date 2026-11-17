@@ -3,8 +3,14 @@
 :root {
   --background: #f4f5f7;
   --foreground: #1a1a1a;
-  --primary: #01665a;
-  --accent: #2e8b7a;
+  /* Edelweiss brand (docs/12): blue dominant, pink secondary, purple accent. The exact brand blue and pink are only 2.8:1 and 4.1:1 on white,
+     so fills and links that carry white text or sit on white use a darkened blue of the same hue (--primary 5.1:1). Exact hexes stay for
+     decoration (header strip, active bar). */
+  --primary: #1a76a1;
+  --biru-merek: #2da5dd;
+  --pink-merek: #ed1c86;
+  --sekunder: #ed1c86;
+  --accent: #5b378b;
 }
 
 @theme inline {
@@ -16,8 +22,8 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-family: var(--font-merek), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px; /* Source Sans runs small next to the system font */
 }
 
 @layer base {
@@ -31,9 +37,9 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 aside :focus-visible {
-  outline-color: #fff;
+  outline-color: #ffffff;
 }

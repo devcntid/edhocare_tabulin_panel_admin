@@ -15,7 +15,7 @@ export function PageHeader({ title, lencana, desc, aksi }: { title: React.ReactN
         </div>
         {desc && <p className="mt-1 text-[13px] text-[#666]">{desc}</p>}
       </div>
-      {aksi && <div className="flex shrink-0 items-center gap-2">{aksi}</div>}
+      {aksi && <div className="flex flex-wrap items-center gap-2">{aksi}</div>}
     </header>
   );
 }
