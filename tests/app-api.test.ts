@@ -5,7 +5,7 @@ import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 config({ path: ".env.local" });
-const URL = process.env.TEST_DATABASE_URL ?? "postgresql://alif@localhost:5432/tabulin_test";
+const URL = process.env.TEST_DATABASE_URL ?? "postgresql://USER:PASSWORD@localhost:5432/tabulin_test";
 process.env.DATABASE_URL = URL; // lib/db reads this when first imported (below, after the schema exists)
 
 type Svc = typeof import("@/lib/services/app");

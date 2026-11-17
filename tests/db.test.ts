@@ -6,7 +6,7 @@ import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 config({ path: ".env.local" });
-const URL = process.env.TEST_DATABASE_URL ?? "postgresql://alif@localhost:5432/tabulin_test";
+const URL = process.env.TEST_DATABASE_URL ?? "postgresql://USER:PASSWORD@localhost:5432/tabulin_test";
 const root = process.cwd();
 
 async function connect() {
