@@ -10,7 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const jenis = one(sp.jenis) ?? "";
   const data = await daftarTransaksi({ q, jenis, page: pageNum(sp.page) });
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="setoran"
       judul="Setoran (buku besar)"
       desc="Setoran diterima dari API (bank/aplikasi) secara otomatis; admin hanya dapat mengoreksi dari halaman detail pendaftaran. Baris buku besar tidak pernah diubah; koreksi dicatat sebagai baris negatif."
       basis="/setoran" cari="Cari no. transaksi, peserta" params={{ q, jenis }} data={data} kunci={(t) => t.id}

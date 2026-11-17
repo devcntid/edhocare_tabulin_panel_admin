@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, label } from "@/components/badge";
 import { HalamanDaftar } from "@/components/halaman-daftar";
 import { one, pageNum } from "@/components/table";
-import { btnPrimary } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/ui";
 import { fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
@@ -15,10 +15,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const user = await getCurrentUser();
   const data = await daftar({ q, status, page: pageNum(sp.page) });
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="pendaftaran"
       judul="Pendaftaran"
       desc="Pendaftaran program Tabulin dari aplikasi atau petugas. Verifikasi, pasang VA, dan terbitkan tagihan dari halaman detail."
-      aksi={user && can(user.peran, "verifikasi") && <Link href="/pendaftaran/baru" className={btnPrimary}>+ Pendaftaran baru</Link>}
+      aksi={user && can(user.peran, "verifikasi") && <><Link href="/pendaftaran/impor" className={btnSecondary}>Impor CSV</Link><Link href="/pendaftaran/baru" className={btnPrimary}>+ Pendaftaran baru</Link></>}
       basis="/pendaftaran" cari="Cari nama, no., No. RM, No. HP" params={{ q, status }} data={data} kunci={(p) => p.id}
       filter={[{ name: "status", semua: "Semua status", opsi: STATUS.map((s) => [s, label(s)] as const) }]}
       kolom={[

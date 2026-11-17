@@ -29,7 +29,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     ...(bisa ? [{ judul: "", sel: (g: Baris) => (g.status_tampil !== "lunas" ? <PengingatButton id={g.id} nomor={g.nomor} lewat={g.status_tampil === "lewat_jatuh_tempo"} /> : null) }] : []),
   ];
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="tagihan"
       judul="Tagihan" desc="Tagihan DP dan cicilan bulanan peserta. Kirim pengingat untuk tagihan yang belum dibayar."
       basis="/tagihan" cari="Cari no. tagihan, peserta" params={{ q, status }} data={data} kunci={(g) => g.id} kolom={kolom}
       filter={[{ name: "status", semua: "Semua status", opsi: [["belum_dibayar", "Belum dibayar"], ["lewat_jatuh_tempo", "Lewat jatuh tempo"], ["lunas", "Lunas"]] }]}

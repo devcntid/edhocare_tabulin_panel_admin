@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import { CariInput, FilterBar, Halaman, PageHeader, Pilih } from "@/components/page";
 import { Angka, Pager, Table, Uang } from "@/components/table";
+import { btnSecondary } from "@/components/ui";
 
 export type Kolom<T> =
   | { judul: string; tipe?: "teks"; sel: (r: T) => ReactNode }
@@ -12,10 +13,12 @@ export type Kolom<T> =
 
 export type FilterPilih = { name: string; semua: string; opsi: readonly (readonly [string, string])[] };
 
-export function HalamanDaftar<T>({ judul, desc, aksi, cari, filter = [], params, basis, data, kolom, kunci }: {
+export function HalamanDaftar<T>({ judul, desc, aksi, ekspor, cari, filter = [], params, basis, data, kolom, kunci }: {
   judul: string;
   desc?: ReactNode;
   aksi?: ReactNode;
+  /** Export dataset key (lib/services/ekspor.ts): adds CSV and PDF buttons that carry the current search and filter. Omit when the user may not export. */
+  ekspor?: string;
   /** Placeholder of the search box; omit for lists without search. */
   cari?: string;
   filter?: FilterPilih[];
@@ -30,7 +33,7 @@ export function HalamanDaftar<T>({ judul, desc, aksi, cari, filter = [], params,
   const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
   return (
     <Halaman>
-      <PageHeader title={judul} desc={desc} aksi={aksi} />
+      <PageHeader title={judul} desc={desc} aksi={(ekspor || aksi) && <>{ekspor && <TombolEkspor dataset={ekspor} params={params} />}{aksi}</>} />
       {(cari || filter.length > 0) && (
         <FilterBar>
           {cari && <CariInput defaultValue={params.q ?? ""} placeholder={cari} />}
@@ -51,5 +54,16 @@ export function HalamanDaftar<T>({ judul, desc, aksi, cari, filter = [], params,
         <Pager base={query ? `${basis}?${query}` : basis} page={data.page} pages={data.pages} total={data.total} />
       </div>
     </Halaman>
+  );
+}
+
+/** CSV / PDF download links for the list on screen (search and filters are passed on to the export). */
+function TombolEkspor({ dataset, params }: { dataset: string; params: Record<string, string> }) {
+  const href = (format: string) => `/api/ekspor/${dataset}?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).filter(([, v]) => v)), format })}`;
+  return (
+    <>
+      <a href={href("csv")} className={btnSecondary} download>Ekspor CSV</a>
+      <a href={href("pdf")} className={btnSecondary} download>Ekspor PDF</a>
+    </>
   );
 }

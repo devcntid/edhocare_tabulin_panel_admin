@@ -11,7 +11,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const kategori = one(sp.kategori) ?? "";
   const data = await daftarNotifikasi({ q, kategori, page: pageNum(sp.page) });
   return (
-    <HalamanDaftar
+    <HalamanDaftar ekspor="notifikasi"
       judul="Notifikasi ke peserta"
       desc={<>Log notifikasi dari aksi admin dan sistem. Teks dirender dari templat dan disimpan sebagai salinan. Versi lokal memakai pengiriman tiruan: status &quot;tercatat&quot; berarti hanya dicatat, belum dikirim lewat push/WhatsApp.</>}
       basis="/notifikasi" cari="Cari judul, peserta, templat" params={{ q, kategori }} data={data} kunci={(n) => n.id}
