@@ -1,0 +1,50 @@
+/** Shared building blocks for server-side list queries (search + filter + pagination). New list endpoints should use these instead of re-writing them. */
+import { pool } from "@/lib/db";
+import { PAGE_SIZE } from "@/lib/services/pendaftaran";
+
+export function paging(page: number | undefined) {
+  const p = Math.max(1, page ?? 1);
+  return { p, limit: PAGE_SIZE, offset: (p - 1) * PAGE_SIZE };
+}
+export const pages = (total: number) => Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+/** ILIKE search over several columns. Pushes its parameter onto `args`; null when the search is empty. */
+export function cari(args: unknown[], q: string | undefined, kolom: string[]): string | null {
+  if (!q?.trim()) return null;
+  args.push(`%${q.trim().replace(/[\\%_]/g, "\\$&")}%`);
+  return "(" + kolom.map((c) => `${c} ILIKE $${args.length}`).join(" OR ") + ")";
+}
+
+/** Equality filter restricted to an allowlist (never interpolate user input). Null when empty or not allowed. */
+export function pilih(args: unknown[], nilai: string | undefined, boleh: readonly string[], kolom: string): string | null {
+  if (!nilai || !boleh.includes(nilai)) return null;
+  args.push(nilai);
+  return `${kolom} = $${args.length}`;
+}
+
+export const klausa = (kond: (string | null)[]) => {
+  const k = kond.filter(Boolean);
+  return k.length ? "WHERE " + k.join(" AND ") : "";
+};
+
+/** Allowed values of the standard filters (also used to build the filter dropdowns). */
+export const FILTER = {
+  statusTagihan: ["belum_dibayar", "lewat_jatuh_tempo", "lunas"],
+  jenisTransaksi: ["DP", "Setoran bulanan", "Setoran bulanan + tambahan", "Setoran tambahan", "Koreksi"],
+  kategoriNotifikasi: ["pendaftaran", "tagihan", "pembayaran", "milestone"],
+  hasilApi: ["diterima", "duplikat", "ditolak"],
+  statusJadwal: ["belum_terbit", "belum_dibayar", "lewat_jatuh_tempo", "lunas"],
+} as const;
+
+export type Halaman<T> = { rows: T[]; total: number; page: number; pages: number };
+
+/**
+ * One page of a list. `dari` is everything after FROM (joins and the WHERE built with `klausa`),
+ * `args` the parameters collected by `cari`/`pilih`, `pilihan` the SELECT list, `urut` the ORDER BY.
+ */
+export async function ambilHalaman<T>(o: { dari: string; args: unknown[]; pilihan: string; urut: string; page?: number }): Promise<Halaman<T>> {
+  const { p, limit, offset } = paging(o.page);
+  const total = (await pool.query(`SELECT count(*)::int AS n FROM ${o.dari}`, o.args)).rows[0].n as number;
+  const { rows } = await pool.query(`SELECT ${o.pilihan} FROM ${o.dari} ORDER BY ${o.urut} LIMIT ${limit} OFFSET ${offset}`, o.args);
+  return { rows: rows as T[], total, page: p, pages: pages(total) };
+}
