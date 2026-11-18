@@ -6,16 +6,43 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import type { PasienApp } from "@/lib/app-api";
 import { pool } from "@/lib/db";
-import { BANK_DIDUKUNG, ambilStatusTransaksi, buatChargeVa } from "@/lib/midtrans";
+import { BANK_DIDUKUNG, PANJANG_VA_KUSTOM, ambilStatusTransaksi, buatChargeVa, prefixVa } from "@/lib/midtrans";
 
 const checkoutSchema = z.object({ bank: z.enum(BANK_DIDUKUNG, "Bank tidak didukung.").default("bca") });
+
+/** Default VA for a new registration: the Midtrans merchant prefix + a sequence number, or null (the database then makes its own). */
+export async function vaBawaan(): Promise<string | null> {
+  const prefix = prefixVa();
+  if (!prefix) return null;
+  const n = (await pool.query("SELECT nextval('va_seq')::text AS n")).rows[0].n as string;
+  return prefix + n.padStart(16 - prefix.length, "0");
+}
+
+/**
+ * A patient whose VA is prefix + 11 digits pays every bill to that same number, so Midtrans can hold only one open charge for it.
+ * Open charges are checked with Midtrans first (an expired one must not block); a live one refuses the new checkout.
+ */
+async function pastikanTidakAdaPembayaranMenunggu(pendaftaranId: number) {
+  const terbuka = (
+    await pool.query(
+      "SELECT pg.order_id, g.nomor FROM pembayaran_gateway pg JOIN tagihan g ON g.id = pg.tagihan_id WHERE pg.pendaftaran_id = $1 AND pg.status = 'menunggu' ORDER BY pg.id",
+      [pendaftaranId],
+    )
+  ).rows as { order_id: string; nomor: string }[];
+  for (const t of terbuka) {
+    const s = (await ambilStatusTransaksi(t.order_id))?.transaction_status;
+    const akhir = s === "expire" ? "kedaluwarsa" : !s || ["deny", "cancel", "failure"].includes(s) ? "gagal" : null;
+    if (!akhir) throw new ApiError(409, "PEMBAYARAN_MENUNGGU", `Masih ada pembayaran yang menunggu untuk tagihan ${t.nomor}. Selesaikan pembayaran itu atau tunggu sampai kedaluwarsa sebelum membayar lagi.`);
+    await pool.query("UPDATE pembayaran_gateway SET status = $2, diperbarui_pada = now() WHERE order_id = $1 AND status = 'menunggu'", [t.order_id, akhir]);
+  }
+}
 
 /** Creates a VA charge for an unpaid bill owned by the patient. */
 export async function checkoutTagihan(pasien: PasienApp, nomor: string, body: unknown) {
   const { bank } = checkoutSchema.parse(body ?? {});
   const g = (
     await pool.query(
-      `SELECT g.id, g.nomor, g.nominal, g.status, p.id AS pendaftaran_id, p.status_pendaftaran
+      `SELECT g.id, g.nomor, g.nominal, g.status, p.id AS pendaftaran_id, p.status_pendaftaran, p.no_va
        FROM tagihan g JOIN pendaftaran p ON p.id = g.pendaftaran_id WHERE p.no_rm = $1 AND g.nomor = $2`,
       [pasien.no_rm, nomor],
     )
@@ -25,7 +52,10 @@ export async function checkoutTagihan(pasien: PasienApp, nomor: string, body: un
   if (g.status_pendaftaran !== "aktif") throw new ApiError(409, "PENDAFTARAN_TIDAK_AKTIF", "Pendaftaran Tabulin belum aktif.");
   const nominal = Number(g.nominal);
   const orderId = `${g.nomor}-${randomBytes(4).toString("hex")}`;
-  const c = await buatChargeVa(orderId, nominal, bank);
+  const prefix = prefixVa();
+  const vaKustom = bank === "bca" && prefix && typeof g.no_va === "string" && g.no_va.startsWith(prefix) && g.no_va.length === prefix.length + PANJANG_VA_KUSTOM ? g.no_va.slice(prefix.length) : undefined;
+  if (vaKustom) await pastikanTidakAdaPembayaranMenunggu(g.pendaftaran_id);
+  const c = await buatChargeVa(orderId, nominal, bank, vaKustom);
   await pool.query(
     "INSERT INTO pembayaran_gateway (order_id, pendaftaran_id, tagihan_id, nominal, bank, nomor_va, id_transaksi_gateway) VALUES ($1,$2,$3,$4,$5,$6,$7)",
     [orderId, g.pendaftaran_id, g.id, nominal, bank, c.nomor_va, c.id_transaksi],

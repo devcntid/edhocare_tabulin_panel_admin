@@ -126,3 +126,60 @@ describe("notification (callback)", () => {
     expect(await galat(gw.checkoutTagihan(pasien("RM-1"), tagihan, {}))).toMatchObject({ status: 409, code: "TAGIHAN_SUDAH_LUNAS" });
   });
 });
+
+describe("VA tetap per pasien (MIDTRANS_VA_PREFIX)", () => {
+  let tagihanVa: string;
+  beforeAll(async () => {
+    await db.query("INSERT INTO pasien (no_rm,nama,no_hp) VALUES ('RM-3','Pasien RM-3','081200000001')");
+    const tab = await import("@/lib/services/tabungan");
+    const hpht = tab.addDays((await db.query("SELECT today_jkt()::text AS d")).rows[0].d, -70);
+    const e = await app.daftarApp(pasien("RM-3"), {
+      kode_faskes: "BDG", kode_cara_persalinan: "partus_normal", kode_kelas_kamar: "kelas_1", hpht, no_hp: "081200000001",
+      persetujuan_disetujui: true, versi_persetujuan: "v1", jenis_rencana: "minimum",
+    }, null);
+    await db.query("SELECT setujui_pendaftaran($1,$2)", [e.id_pendaftaran, admin]);
+    await db.query("SELECT pasang_va($1,'5665200000000001',$2)", [e.id_pendaftaran, admin]);
+    tagihanVa = (await db.query("SELECT nomor FROM tagihan WHERE pendaftaran_id = $1 AND jenis = 'dp'", [e.id_pendaftaran])).rows[0].nomor;
+  });
+  afterEach(() => { delete process.env.MIDTRANS_VA_PREFIX; });
+
+  /** Midtrans answers a charge with the fixed VA and a status check with the given transaction_status. */
+  function mockMidtrans(statusLama: string) {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+      new Response(
+        String(url).includes("/status")
+          ? JSON.stringify({ status_code: "200", order_id: decodeURIComponent(String(url).split("/v2/")[1].split("/status")[0]), gross_amount: "1.00", transaction_status: statusLama })
+          : JSON.stringify({ status_code: "201", transaction_id: "mid-va", va_numbers: [{ bank: "bca", va_number: "5665200000000001" }] }),
+        { status: 200 },
+      ));
+  }
+
+  it("builds the default VA from the prefix, or leaves it to the database without one", async () => {
+    expect(await gw.vaBawaan()).toBeNull();
+    process.env.MIDTRANS_VA_PREFIX = "56652";
+    expect(await gw.vaBawaan()).toMatch(/^56652\d{11}$/);
+  });
+
+  it("asks Midtrans for the patient's own number, refuses a second open charge, and allows it once the first expired", async () => {
+    process.env.MIDTRANS_VA_PREFIX = "56652";
+    const f = mockMidtrans("pending");
+    const r1 = await gw.checkoutTagihan(pasien("RM-3"), tagihanVa, { bank: "bca" });
+    expect(JSON.parse(String(f.mock.calls[0][1]?.body)).bank_transfer).toEqual({ bank: "bca", va_number: "00000000001" });
+    expect(r1.nomor_va).toBe("5665200000000001");
+
+    expect(await galat(gw.checkoutTagihan(pasien("RM-3"), tagihanVa, { bank: "bca" }))).toMatchObject({ status: 409, code: "PEMBAYARAN_MENUNGGU" });
+    expect((await db.query("SELECT count(*)::int AS n FROM pembayaran_gateway WHERE tagihan_id = (SELECT id FROM tagihan WHERE nomor = $1)", [tagihanVa])).rows[0].n).toBe(1);
+
+    vi.restoreAllMocks();
+    mockMidtrans("expire");
+    const r2 = await gw.checkoutTagihan(pasien("RM-3"), tagihanVa, { bank: "bca" });
+    expect(r2.id_pembayaran).not.toBe(r1.id_pembayaran);
+    expect((await db.query("SELECT status FROM pembayaran_gateway WHERE order_id = $1", [r1.id_pembayaran])).rows[0].status).toBe("kedaluwarsa");
+  });
+
+  it("does not ask for a fixed number when no prefix is configured", async () => {
+    const f = mockCharge();
+    await gw.checkoutTagihan(pasien("RM-3"), tagihanVa, { bank: "bca" });
+    expect(JSON.parse(String(f.mock.calls[0][1]?.body)).bank_transfer).toEqual({ bank: "bca" });
+  });
+});
