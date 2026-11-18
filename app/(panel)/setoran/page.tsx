@@ -20,6 +20,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         { judul: "No. transaksi", sel: (t) => t.nomor },
         { judul: "Peserta", sel: (t) => <Link className="font-semibold text-[var(--primary)]" href={`/pendaftaran/${t.pendaftaran_id}`}>{t.nama}</Link> },
         { judul: "Jenis", sel: (t) => t.jenis },
+        { judul: "Metode", sel: (t) => t.metode ?? "-" },
         { judul: "Tgl bayar", sel: (t) => fmtTgl(t.tanggal_bayar) },
         { judul: "Nominal", tipe: "uang", sel: (t) => t.nominal_transaksi },
         { judul: "Saldo setelah", tipe: "uang", sel: (t) => t.saldo_setelah },

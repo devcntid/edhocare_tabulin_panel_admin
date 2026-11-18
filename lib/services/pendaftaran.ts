@@ -206,12 +206,13 @@ const setoranSchema = z.object({
   tanggal_bayar: z.string("Field ini wajib diisi.").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD."),
   nominal: z.coerce.number("Nominal harus berupa angka.").int("Nominal harus bilangan bulat.").positive("Nominal harus lebih dari 0.").max(10_000_000_000),
   tagihan_id: z.number().int().positive().nullable().optional(),
+  kanal_id: z.number("Pilih metode pembayaran.").int().positive("Pilih metode pembayaran."),
 });
 
-/** Manual deposit confirmation by finance (bank transfer checked the next day). Rules (H+1, under-payment, ownership of the bill) live in konfirmasi_setoran. */
+/** Manual deposit confirmation by finance (bank transfer or cash, checked the next day; kanal_id = the method used). Rules (H+1, under-payment, ownership of the bill) live in konfirmasi_setoran. */
 export async function konfirmasiSetoranManual(id: number, raw: unknown, adminId: number) {
   const b = setoranSchema.parse(raw);
-  return panggil("konfirmasi_setoran", [id, b.tanggal_bayar, b.nominal, b.tagihan_id ?? null, adminId]);
+  return panggil("konfirmasi_setoran", [id, b.tanggal_bayar, b.nominal, b.tagihan_id ?? null, adminId, b.kanal_id]);
 }
 
 /** Run a DB state-transition function and return its row. */

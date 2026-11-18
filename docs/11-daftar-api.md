@@ -44,7 +44,7 @@ Izin admin (`lib/permissions.ts`):
 | POST | `/api/pendaftaran/{id}/kedaluwarsa` | Tandai kedaluwarsa. | verifikasi |
 | POST | `/api/pendaftaran/{id}/pasang-va` | Pasang nomor VA (16 digit; kosong = dibuat otomatis), terbitkan tagihan DP, status menjadi `aktif`. | keuangan |
 | POST | `/api/pendaftaran/{id}/tagihan` | Terbitkan tagihan bulanan (`periode` YYYY-MM, opsional). | keuangan |
-| POST | `/api/pendaftaran/{id}/setoran` | Konfirmasi setoran manual dari transfer bank yang sudah dicek (`tanggal_bayar`, `nominal`, `tagihan_id` opsional). Tanggal harus sebelum hari ini (H+1), nominal tidak boleh kurang dari tagihan. Hanya untuk jalur transfer bank manual: tagihan yang punya pembayaran gateway berstatus menunggu ditolak (409 `MENUNGGU_GATEWAY`), karena callback gateway yang mengkonfirmasinya. Menambah saldo, melunasi tagihan, mengirim notifikasi. | keuangan |
+| POST | `/api/pendaftaran/{id}/setoran` | Konfirmasi setoran manual dari transfer bank manual atau tunai yang sudah dicek (`tanggal_bayar`, `nominal`, `kanal_id` wajib, `tagihan_id` opsional). `kanal_id` harus metode aktif berjenis `transfer_manual` atau `tunai`, selain itu ditolak (409 `METODE_TIDAK_VALID`); metode tercatat di transaksi. Tanggal harus sebelum hari ini (H+1), nominal tidak boleh kurang dari tagihan. Hanya untuk jalur manual: tagihan yang punya pembayaran gateway berstatus menunggu ditolak (409 `MENUNGGU_GATEWAY`), karena callback gateway yang mengkonfirmasinya. Menambah saldo, melunasi tagihan, mengirim notifikasi. | keuangan |
 | POST | `/api/pendaftaran/{id}/selesai` | Tandai program selesai. | keuangan |
 | POST | `/api/tagihan/{id}/pengingat` | Kirim pengingat tagihan (notifikasi dari templat). | keuangan |
 | POST | `/api/transaksi/{id}/koreksi` | Koreksi transaksi dengan `alasan` (buku besar append-only: dibuat baris koreksi, bukan ubah). | keuangan |
@@ -69,8 +69,8 @@ Izin admin (`lib/permissions.ts`):
 
 | Method | Path | Fungsi | Izin |
 |---|---|---|---|
-| POST | `/api/pembayaran/kanal` | Tambah metode pembayaran. | keuangan |
-| PATCH | `/api/pembayaran/kanal/{id}` | Ubah nama, deskripsi, atau `aktif`. | keuangan |
+| POST | `/api/pembayaran/kanal` | Tambah metode pembayaran (`kode`, `nama`, `deskripsi`, `jenis`: `va`, `transfer_manual`, atau `tunai`; bawaan `va`). Metode baru nonaktif. | keuangan |
+| PATCH | `/api/pembayaran/kanal/{id}` | Ubah nama, deskripsi, `jenis`, atau `aktif`. | keuangan |
 | POST | `/api/pembayaran/instruksi` | Tambah instruksi pembayaran (bank, rekening, langkah). | keuangan |
 | PATCH | `/api/pembayaran/instruksi/{id}` | Ubah instruksi. | keuangan |
 | PATCH | `/api/templat/{kode}` | Ubah templat notifikasi (nama, kategori, judul, isi, `aktif`). | verifikasi |
