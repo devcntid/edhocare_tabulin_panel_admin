@@ -10,6 +10,9 @@ export function kunciServer(): string {
   return k;
 }
 
+/** Optional per-charge notification URL (Midtrans `X-Override-Notification`): the callback no longer depends on the dashboard setting. */
+const urlNotifikasi = () => process.env.MIDTRANS_NOTIFICATION_URL;
+
 export const BANK_DIDUKUNG = ["bca", "bni", "bri", "cimb", "permata"] as const;
 export type BankVa = (typeof BANK_DIDUKUNG)[number];
 
@@ -23,6 +26,7 @@ export async function buatChargeVa(orderId: string, nominal: number, bank: BankV
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: `Basic ${Buffer.from(`${kunciServer()}:`).toString("base64")}`,
+      ...(urlNotifikasi() ? { "X-Override-Notification": urlNotifikasi() as string } : {}),
     },
     body: JSON.stringify({
       payment_type: "bank_transfer",

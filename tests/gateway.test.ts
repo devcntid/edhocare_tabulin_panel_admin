@@ -92,6 +92,9 @@ describe("notification (callback)", () => {
     expect(await galat(gw.terimaNotifikasiMidtrans(notif("INV-X-tidak-ada")))).toMatchObject({ status: 404 });
     expect(await galat(gw.terimaNotifikasiMidtrans(notif(order, { gross_amount: "1000.00", signature_key: sign(order, "200", "1000.00") })))).toMatchObject({ status: 422, code: "NOMINAL_TIDAK_SESUAI" });
     expect(await saldo()).toBe(0);
+    // each refusal leaves a trace in Log Setoran API
+    const kode = (await db.query("SELECT kode_galat FROM log_setoran_api WHERE referensi IN ($1,'INV-X-tidak-ada') ORDER BY id", [order])).rows.map((x) => x.kode_galat);
+    expect(kode).toEqual(["TANDA_TANGAN_TIDAK_VALID", "PESANAN_TIDAK_DIKENAL", "NOMINAL_TIDAK_SESUAI"]);
   });
 
   it("keeps the order waiting on a pending notification", async () => {
@@ -107,7 +110,7 @@ describe("notification (callback)", () => {
     expect((await db.query("SELECT sumber FROM transaksi WHERE ref_eksternal = $1", [order])).rows[0].sumber).toBe("api");
     await gw.terimaNotifikasiMidtrans(notif(order));
     expect(await saldo()).toBe(nominal);
-    expect((await db.query("SELECT hasil FROM log_setoran_api WHERE referensi = $1 ORDER BY id", [order])).rows.map((x) => x.hasil)).toEqual(["ditolak", "diterima", "duplikat"]); // the first is the earlier wrong-amount refusal
+    expect((await db.query("SELECT hasil FROM log_setoran_api WHERE referensi = $1 ORDER BY id", [order])).rows.map((x) => x.hasil)).toEqual(["ditolak", "ditolak", "diterima", "duplikat"]); // the first two are the earlier bad-signature and wrong-amount refusals
     expect((await db.query("SELECT status FROM pembayaran_gateway WHERE order_id = $1", [order])).rows[0].status).toBe("berhasil");
   });
 

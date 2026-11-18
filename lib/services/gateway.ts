@@ -43,7 +43,7 @@ const notifSchema = z.object({
   transaction_id: z.string().optional(),
 });
 
-async function catat(noVa: string | null, ref: string, nominal: number, hasil: "diterima" | "duplikat" | "ditolak", extra: { kode?: string; pesan?: string; nomor?: string | null }) {
+async function catat(noVa: string | null, ref: string | null, nominal: number | null, hasil: "diterima" | "duplikat" | "ditolak", extra: { kode?: string; pesan?: string; nomor?: string | null }) {
   await pool
     .query(
       "INSERT INTO log_setoran_api (no_va, referensi, nominal, tanggal_bayar, hasil, kode_galat, pesan, nomor_transaksi) VALUES ($1,$2,$3,to_char(today_jkt(),'YYYY-MM-DD'),$4,$5,$6,$7)",
@@ -55,7 +55,12 @@ async function catat(noVa: string | null, ref: string, nominal: number, hasil: "
 /** Handles a Midtrans HTTP notification. The signature is checked first; unknown orders and amount mismatches are refused. */
 export async function terimaNotifikasiMidtrans(raw: unknown) {
   const n = notifSchema.safeParse(raw);
-  if (!n.success || !tandaTanganValid(n.data)) throw new ApiError(401, "BELUM_LOGIN", "Tanda tangan tidak valid.");
+  if (!n.success || !tandaTanganValid(n.data)) {
+    // Every refused notification is visible in Log Setoran API, so a payment that never settles in the panel can be traced.
+    const ref = n.success ? n.data.order_id : typeof (raw as { order_id?: unknown } | null)?.order_id === "string" ? String((raw as { order_id: string }).order_id).slice(0, 100) : null;
+    await catat(null, ref, null, "ditolak", { kode: "TANDA_TANGAN_TIDAK_VALID", pesan: "Notifikasi gateway ditolak: tanda tangan atau format tidak valid." });
+    throw new ApiError(401, "BELUM_LOGIN", "Tanda tangan tidak valid.");
+  }
   const b = n.data;
   const row = (
     await pool.query(
@@ -64,7 +69,10 @@ export async function terimaNotifikasiMidtrans(raw: unknown) {
       [b.order_id],
     )
   ).rows[0];
-  if (!row) throw new ApiError(404, "TIDAK_DITEMUKAN", "Pesanan tidak dikenal.");
+  if (!row) {
+    await catat(null, b.order_id, Number(b.gross_amount) || null, "ditolak", { kode: "PESANAN_TIDAK_DIKENAL", pesan: "Notifikasi untuk pesanan yang tidak dikenal." });
+    throw new ApiError(404, "TIDAK_DITEMUKAN", "Pesanan tidak dikenal.");
+  }
   const nominal = Number(row.nominal);
   if (Number(b.gross_amount) !== nominal) {
     await catat(row.no_va, b.order_id, nominal, "ditolak", { kode: "NOMINAL_TIDAK_SESUAI", pesan: "Nominal notifikasi berbeda dengan pesanan." });
