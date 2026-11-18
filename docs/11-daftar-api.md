@@ -42,7 +42,7 @@ Izin admin (`lib/permissions.ts`):
 | POST | `/api/pendaftaran/{id}/setujui` | Setujui pendaftaran (menunggu_verifikasi → va_disiapkan). | verifikasi |
 | POST | `/api/pendaftaran/{id}/tolak` | Tolak dengan `alasan`. | verifikasi |
 | POST | `/api/pendaftaran/{id}/kedaluwarsa` | Tandai kedaluwarsa. | verifikasi |
-| POST | `/api/pendaftaran/{id}/pasang-va` | Pasang nomor VA (16 digit; kosong = dibuat otomatis), terbitkan tagihan DP, status menjadi `aktif`. | keuangan |
+| POST | `/api/pendaftaran/{id}/pasang-va` | Pasang nomor VA (16 digit; kosong = dibuat otomatis, dengan awalan `MIDTRANS_VA_PREFIX` bila diisi), terbitkan tagihan DP, status menjadi `aktif`. | keuangan |
 | POST | `/api/pendaftaran/{id}/tagihan` | Terbitkan tagihan bulanan (`periode` YYYY-MM, opsional). | keuangan |
 | POST | `/api/pendaftaran/{id}/setoran` | Konfirmasi setoran manual dari transfer bank manual atau tunai yang sudah dicek (`tanggal_bayar`, `nominal`, `kanal_id` wajib, `tagihan_id` opsional). `kanal_id` harus metode aktif berjenis `transfer_manual` atau `tunai`, selain itu ditolak (409 `METODE_TIDAK_VALID`); metode tercatat di transaksi. Tanggal harus sebelum hari ini (H+1), nominal tidak boleh kurang dari tagihan. Hanya untuk jalur manual: tagihan yang punya pembayaran gateway berstatus menunggu ditolak (409 `MENUNGGU_GATEWAY`), karena callback gateway yang mengkonfirmasinya. Menambah saldo, melunasi tagihan, mengirim notifikasi. | keuangan |
 | POST | `/api/pendaftaran/{id}/selesai` | Tandai program selesai. | keuangan |
@@ -123,7 +123,7 @@ Kode E-xx mengikuti kontrak. Daftar memakai paginasi cursor (`limit` 1–50, `cu
 | E-05 | GET | `/api/v1/enrollments/me` | Status pendaftaran, rencana, dan profil milik pasien. |
 | E-06 | GET | `/api/v1/bills` | Daftar tagihan. Query: `kelompok=aktif\|riwayat\|semua`. |
 | E-07 | GET | `/api/v1/bills/{id}` | Detail satu tagihan, termasuk klaim terkait. |
-| - | POST | `/api/v1/bills/{id}/checkout` | Buat VA pembayaran Midtrans Sandbox untuk tagihan (`bank` opsional, bawaan `bca`). Tagihan harus milik pasien, belum lunas, pendaftaran aktif. |
+| - | POST | `/api/v1/bills/{id}/checkout` | Buat VA pembayaran Midtrans Sandbox untuk tagihan (`bank` opsional, bawaan `bca`). Tagihan harus milik pasien, belum lunas, pendaftaran aktif. Bila `MIDTRANS_VA_PREFIX` diisi dan VA pasien berawalan itu (awalan + 11 digit), Midtrans memakai nomor VA pasien itu untuk setiap tagihan; selama pembayaran sebelumnya masih menunggu, checkout ditolak (409 `PEMBAYARAN_MENUNGGU`). Pembayaran yang sudah kedaluwarsa atau gagal di Midtrans tidak menghalangi. |
 | E-08 | GET | `/api/v1/ledger` | Riwayat transaksi (buku besar). Query: `jenis_transaksi`, `bulan` (YYYY-MM). |
 | E-09 | GET | `/api/v1/receipt` | Data kuitansi satu transaksi (`id_transaksi`) beserta tautan PDF bertanda tangan (berlaku 15 menit). |
 | (E-09) | GET | `/api/v1/receipt/{id}/pdf?token=` | Unduh PDF kuitansi. Diizinkan oleh token di URL, tanpa Bearer. |
