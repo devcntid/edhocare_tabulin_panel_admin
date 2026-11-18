@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { ApiError } from "@/lib/api";
 
 // Midtrans Sandbox only. MIDTRANS_SERVER_KEY must be a sandbox key; the base URL defaults to the sandbox host.
@@ -45,10 +44,23 @@ export async function buatChargeVa(orderId: string, nominal: number, bank: BankV
   return { id_transaksi: j.transaction_id, nomor_va: va, bank };
 }
 
-/** signature_key = SHA512(order_id + status_code + gross_amount + server key). Compared in constant time. */
-export function tandaTanganValid(n: { order_id?: unknown; status_code?: unknown; gross_amount?: unknown; signature_key?: unknown }): boolean {
-  if ([n.order_id, n.status_code, n.gross_amount, n.signature_key].some((v) => typeof v !== "string")) return false;
-  const want = createHash("sha512").update(`${n.order_id}${n.status_code}${n.gross_amount}${kunciServer()}`).digest("hex");
-  const got = String(n.signature_key);
-  return got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want));
+export type StatusTransaksi = { status_code: string; transaction_status: string; gross_amount: string; fraud_status?: string };
+
+/**
+ * Authoritative status of an order, asked from Midtrans with the server key (Midtrans' recommended way to trust a notification).
+ * The notification body itself is never believed: anyone can post to the callback URL, but only Midtrans answers this call.
+ * Returns null when Midtrans does not know the order.
+ */
+export async function ambilStatusTransaksi(orderId: string): Promise<StatusTransaksi | null> {
+  const res = await fetch(`${BASE()}/v2/${encodeURIComponent(orderId)}/status`, {
+    headers: { Accept: "application/json", Authorization: `Basic ${Buffer.from(`${kunciServer()}:`).toString("base64")}` },
+    signal: AbortSignal.timeout(15_000),
+  }).catch(() => {
+    throw new ApiError(502, "GATEWAY_GAGAL", "Gateway pembayaran tidak dapat dihubungi.");
+  });
+  const j = (await res.json().catch(() => null)) as (Partial<StatusTransaksi> & { order_id?: string }) | null;
+  if (!j) throw new ApiError(502, "GATEWAY_GAGAL", "Respons gateway tidak dapat dibaca.");
+  if (j.status_code === "404") return null;
+  if (j.order_id !== orderId || !j.status_code || !j.transaction_status || !j.gross_amount) throw new ApiError(502, "GATEWAY_GAGAL", "Respons gateway tidak lengkap.");
+  return { status_code: j.status_code, transaction_status: j.transaction_status, gross_amount: j.gross_amount, fraud_status: j.fraud_status };
 }
