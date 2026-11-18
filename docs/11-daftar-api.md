@@ -1,6 +1,6 @@
 # 11 – Daftar API Tabulin
 
-Daftar semua endpoint dan fungsinya. Hanya list dan fungsi, bukan spesifikasi lengkap (skema field ada di kode: `app/api/**/route.ts` dan `lib/services/*`; kontrak aplikasi pasien ada di `07-kontrak-data.md`). Per 2026-11-17, **53 endpoint** dalam 4 kelompok.
+Daftar semua endpoint dan fungsinya. Hanya list dan fungsi, bukan spesifikasi lengkap (skema field ada di kode: `app/api/**/route.ts` dan `lib/services/*`; kontrak aplikasi pasien ada di `07-kontrak-data.md`). Per 2026-11-17, **55 endpoint** dalam 4 kelompok.
 
 ## Cara membaca
 
@@ -103,7 +103,8 @@ Izin admin (`lib/permissions.ts`):
 | Method | Path | Fungsi |
 |---|---|---|
 | POST | `/api/integrasi/token` | Terbitkan token pasien untuk `no_rm` yang dikenal (pengganti login Portal Pasien sampai RS menyediakannya). |
-| POST | `/api/integrasi/setoran` | Terima setoran dari bank atau aplikasi (`no_va`, `referensi`, `tanggal_bayar`, `nominal`, `nomor_tagihan` opsional). Idempotent pada `referensi`. Tiap panggilan dicatat di log setoran API. Satu-satunya jalan masuk setoran. |
+| POST | `/api/integrasi/setoran` | Terima setoran dari bank atau aplikasi (`no_va`, `referensi`, `tanggal_bayar`, `nominal`, `nomor_tagihan` opsional). Idempotent pada `referensi`. Tiap panggilan dicatat di log setoran API. Jalan masuk setoran dari bank atau aplikasi. |
+| POST | `/api/integrasi/midtrans` | Notifikasi pembayaran Midtrans Sandbox. Diautentikasi dengan `signature_key` (SHA512), bukan Bearer. Settlement menambah saldo lewat fungsi setoran yang sama (idempotent pada `order_id`), tercatat di log setoran API. |
 | GET | `/api/integrasi/instruksi` | Instruksi pembayaran yang aktif untuk ditampilkan di aplikasi. |
 
 ---
@@ -121,6 +122,7 @@ Kode E-xx mengikuti kontrak. Daftar memakai paginasi cursor (`limit` 1–50, `cu
 | E-05 | GET | `/api/v1/enrollments/me` | Status pendaftaran, rencana, dan profil milik pasien. |
 | E-06 | GET | `/api/v1/bills` | Daftar tagihan. Query: `kelompok=aktif\|riwayat\|semua`. |
 | E-07 | GET | `/api/v1/bills/{id}` | Detail satu tagihan, termasuk klaim terkait. |
+| - | POST | `/api/v1/bills/{id}/checkout` | Buat VA pembayaran Midtrans Sandbox untuk tagihan (`bank` opsional, bawaan `bca`). Tagihan harus milik pasien, belum lunas, pendaftaran aktif. |
 | E-08 | GET | `/api/v1/ledger` | Riwayat transaksi (buku besar). Query: `jenis_transaksi`, `bulan` (YYYY-MM). |
 | E-09 | GET | `/api/v1/receipt` | Data kuitansi satu transaksi (`id_transaksi`) beserta tautan PDF bertanda tangan (berlaku 15 menit). |
 | (E-09) | GET | `/api/v1/receipt/{id}/pdf?token=` | Unduh PDF kuitansi. Diizinkan oleh token di URL, tanpa Bearer. |
@@ -144,7 +146,7 @@ Kode E-xx mengikuti kontrak. Daftar memakai paginasi cursor (`limit` 1–50, `cu
 
 ## Catatan
 
-- Setoran hanya masuk lewat `POST /api/integrasi/setoran`. Tidak ada endpoint admin untuk input setoran, dan data pasien tidak bisa diubah dari panel.
+- Setoran hanya masuk lewat `POST /api/integrasi/setoran` atau notifikasi gateway `POST /api/integrasi/midtrans`. Tidak ada endpoint admin untuk input setoran, dan data pasien tidak bisa diubah dari panel.
 - Klaim (E-13, E-15) tidak pernah mengubah saldo. Saldo hanya bertambah saat setoran sungguhan masuk, dan klaim otomatis menjadi `dikonfirmasi`.
 - Halaman panel (bukan API) ada di `app/(panel)/`; aturan halaman daftar di `08-standar-halaman.md`.
 - Cara menambah endpoint baru: bungkus dengan `handler(aksi, fn)` (`lib/api.ts`) untuk admin, `appHandler` (`lib/app-api.ts`) untuk aplikasi pasien.
