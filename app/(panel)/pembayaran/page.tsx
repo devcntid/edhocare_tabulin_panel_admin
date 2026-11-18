@@ -15,9 +15,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const h = potong(tampil, pageNum(sp.page), perNum(sp.per));
   return (
     <Halaman>
-      <PageHeader title="Metode pembayaran" desc="Cara pembayaran yang ditawarkan ke peserta. Metode yang disembunyikan tidak muncul di aplikasi; metode yang belum punya instruksi bisa dihapus. Belum ada integrasi payment gateway." aksi={bisa && <KanalBaru />} />
+      <PageHeader title="Metode pembayaran" desc="Cara pembayaran yang ditawarkan ke peserta. Virtual account masuk otomatis; transfer bank manual dan tunai dikonfirmasi keuangan. Metode yang disembunyikan tidak muncul di aplikasi; metode yang belum dipakai bisa dihapus. Pembayaran lewat gateway (virtual account Midtrans Sandbox) dibuat per tagihan dari aplikasi peserta dan terkonfirmasi otomatis; Faspay belum tersedia." aksi={bisa && <KanalBaru />} />
       <FilterBar><CariInput defaultValue={q} placeholder="Cari nama, kode, deskripsi" /></FilterBar>
-      <Table head={["Metode", "Kode", "Deskripsi", "Instruksi", "Status", ...(bisa ? ["Aksi"] : [])]} empty={!tampil.length} filtered={!!q} resetHref="/pembayaran">
+      <Table head={["Metode", "Jenis", "Kode", "Deskripsi", "Instruksi", "Status", ...(bisa ? ["Aksi"] : [])]} empty={!tampil.length} filtered={!!q} resetHref="/pembayaran">
         {h.rows.map((k) => <KanalBaris key={k.id} k={k} jumlahInstruksi={instruksi.filter((i) => i.kanal_id === k.id).length} bisa={bisa} />)}
       </Table>
       <Pager basis="/pembayaran" params={{ q }} page={h.page} pages={h.pages} total={h.total} per={h.per} />

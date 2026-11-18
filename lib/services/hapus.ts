@@ -18,7 +18,7 @@ export const HAPUS: Record<string, Def> = {
   },
   kanal: {
     aksi: "keuangan", nama: "Metode pembayaran", teks: false,
-    pakai: "SELECT count(*)::int FROM instruksi_pembayaran WHERE kanal_id = $1",
+    pakai: "SELECT (SELECT count(*) FROM instruksi_pembayaran WHERE kanal_id = $1) + (SELECT count(*) FROM transaksi WHERE kanal_id = $1)",
     ambil: "SELECT to_jsonb(t) FROM kanal_pembayaran t WHERE id = $1", hapus: "DELETE FROM kanal_pembayaran WHERE id = $1",
   },
   instruksi: {

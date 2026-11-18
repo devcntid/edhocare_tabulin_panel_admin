@@ -5,27 +5,35 @@ import { Angka } from "@/components/table";
 import { HapusButton } from "@/components/hapus-button";
 import { input, TAMPIL } from "@/components/ui";
 import { useApi } from "@/components/use-api";
+import { JENIS_KANAL, type JenisKanal } from "@/lib/format";
 
-export type K = { id: number; kode: string; nama: string; deskripsi: string | null; aktif: boolean };
+export type K = { id: number; kode: string; nama: string; deskripsi: string | null; aktif: boolean; jenis: JenisKanal };
 export type I = { id: number; kanal_id: number; judul: string; isi: string; nama_bank: string | null; nama_rekening: string | null; nomor_rekening: string | null; aktif: boolean };
 
 const galatTeks = (api: { error: string | null; fields: Record<string, string> }) => (api.error ? `${api.error} ${Object.values(api.fields).join(" ")}` : null);
+const pilihJenis = (v: string, set: (x: JenisKanal) => void) => (
+  <select className={input} value={v} onChange={(e) => set(e.target.value as JenisKanal)}>
+    {(Object.keys(JENIS_KANAL) as JenisKanal[]).map((j) => <option key={j} value={j}>{JENIS_KANAL[j]}</option>)}
+  </select>
+);
 const area = "w-full p-3 text-[13px] font-normal";
 
 export function KanalBaris({ k, jumlahInstruksi, bisa }: { k: K; jumlahInstruksi: number; bisa: boolean }) {
   const api = useApi();
   const [nama, setNama] = useState(k.nama);
   const [desk, setDesk] = useState(k.deskripsi ?? "");
+  const [jenis, setJenis] = useState<JenisKanal>(k.jenis);
   return (
     <tr className={k.aktif ? "" : "text-[#999]"}>
-      <td className="whitespace-nowrap font-semibold">{k.nama}</td><td className="font-mono text-xs">{k.kode}</td><td>{k.deskripsi ?? "-"}</td>
+      <td className="whitespace-nowrap font-semibold">{k.nama}</td><td className="whitespace-nowrap">{JENIS_KANAL[k.jenis]}</td><td className="font-mono text-xs">{k.kode}</td><td>{k.deskripsi ?? "-"}</td>
       <Angka v={jumlahInstruksi} />
       <td><StatusAktif aktif={k.aktif} kata={TAMPIL} /></td>
       {bisa && (
         <AksiBaris>
-          <FormDialog gaya="baris" tombol="Ubah" judul={`Ubah metode ${k.nama}`} busy={api.busy} galat={galatTeks(api)} onBatal={() => { setNama(k.nama); setDesk(k.deskripsi ?? ""); }}
-            onSubmit={() => api.call(`/api/pembayaran/kanal/${k.id}`, { nama, deskripsi: desk }, "PATCH")}>
+          <FormDialog gaya="baris" tombol="Ubah" judul={`Ubah metode ${k.nama}`} busy={api.busy} galat={galatTeks(api)} onBatal={() => { setNama(k.nama); setDesk(k.deskripsi ?? ""); setJenis(k.jenis); }}
+            onSubmit={() => api.call(`/api/pembayaran/kanal/${k.id}`, { nama, deskripsi: desk, jenis }, "PATCH")}>
             <Field label="Nama"><input className={input} required value={nama} onChange={(e) => setNama(e.target.value)} /></Field>
+            <Field label="Jenis" hint="Virtual account masuk otomatis. Transfer bank manual dan tunai muncul sebagai pilihan saat keuangan mengonfirmasi setoran.">{pilihJenis(jenis, setJenis)}</Field>
             <Field label="Deskripsi"><input className={input} value={desk} onChange={(e) => setDesk(e.target.value)} /></Field>
           </FormDialog>
           <button className={btnBaris} disabled={api.busy} onClick={() => api.call(`/api/pembayaran/kanal/${k.id}`, { aktif: !k.aktif }, "PATCH")}>{k.aktif ? "Sembunyikan" : "Tampilkan"}</button>
@@ -39,7 +47,7 @@ export function KanalBaris({ k, jumlahInstruksi, bisa }: { k: K; jumlahInstruksi
 
 export function KanalBaru() {
   const api = useApi();
-  const kosong = { kode: "", nama: "", deskripsi: "" };
+  const kosong = { kode: "", nama: "", deskripsi: "", jenis: "va" as JenisKanal };
   const [v, setV] = useState(kosong);
   return (
     <FormDialog tombol="+ Tambah metode" judul="Tambah metode pembayaran" desc="Metode baru nonaktif sampai diaktifkan." simpan="Simpan" busy={api.busy} galat={galatTeks(api)} onBatal={() => setV(kosong)}
@@ -50,6 +58,7 @@ export function KanalBaru() {
       }}>
       <Field label="Kode" hint="Huruf kecil dan garis bawah."><input className={input} required placeholder="mis. transfer_bank" value={v.kode} onChange={(e) => setV({ ...v, kode: e.target.value })} /></Field>
       <Field label="Nama"><input className={input} required value={v.nama} onChange={(e) => setV({ ...v, nama: e.target.value })} /></Field>
+      <Field label="Jenis">{pilihJenis(v.jenis, (jenis) => setV({ ...v, jenis }))}</Field>
       <Field label="Deskripsi (opsional)"><input className={input} value={v.deskripsi} onChange={(e) => setV({ ...v, deskripsi: e.target.value })} /></Field>
     </FormDialog>
   );

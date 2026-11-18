@@ -8,7 +8,7 @@ import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
-import { daftarTagihan } from "@/lib/services/laporan";
+import { daftarTagihan, kanalManual } from "@/lib/services/laporan";
 import { today } from "@/lib/services/pendaftaran";
 import { addDays } from "@/lib/services/tabungan";
 
@@ -22,6 +22,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const user = await getCurrentUser();
   const bisa = !!user && can(user.peran, "keuangan");
   const tanggalMaks = addDays(await today(), -1);
+  const metode = bisa ? await kanalManual() : [];
   const kolom: Kolom<Baris>[] = [
     { judul: "No. tagihan", sel: (g) => g.nomor },
     { judul: "Peserta", sel: (g) => <Link className="font-semibold text-[var(--primary)]" href={`/pendaftaran/${g.pendaftaran_id}`}>{g.nama}</Link> },
@@ -37,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         <>
           <TombolDetail href={`/pendaftaran/${g.pendaftaran_id}`} />
           {bisa && g.status_tampil !== "lunas" && g.status_pendaftaran === "aktif" && !g.menunggu_gateway && (
-            <KonfirmasiSetoran id={g.pendaftaran_id} tagihan={[{ id: g.id, nomor: g.nomor, nominal: Number(g.nominal) }]} awal={g.id} gaya="baris" tombol="Konfirmasi setoran" tanggalMaks={tanggalMaks} />
+            <KonfirmasiSetoran id={g.pendaftaran_id} tagihan={[{ id: g.id, nomor: g.nomor, nominal: Number(g.nominal) }]} metode={metode} awal={g.id} gaya="baris" tombol="Konfirmasi setoran" tanggalMaks={tanggalMaks} />
           )}
           {g.menunggu_gateway && <span className="text-xs text-[#5b6b78]">Menunggu pembayaran gateway</span>}
           {bisa && g.status_tampil !== "lunas" && <PengingatButton id={g.id} nomor={g.nomor} lewat={g.status_tampil === "lewat_jatuh_tempo"} />}

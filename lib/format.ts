@@ -1,3 +1,7 @@
+/** Jenis metode pembayaran: 'va' masuk otomatis; 'transfer_manual' dan 'tunai' dikonfirmasi keuangan. */
+export const JENIS_KANAL = { va: "Virtual account", transfer_manual: "Transfer bank manual", tunai: "Tunai" } as const;
+export type JenisKanal = keyof typeof JENIS_KANAL;
+
 export const fmtAngka = (n: number) => new Intl.NumberFormat("id-ID").format(n);
 
 export const fmtRp = (n: number | null | undefined) => (n == null ? "-" : "Rp " + fmtAngka(n));

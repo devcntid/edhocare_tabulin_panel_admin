@@ -9,6 +9,7 @@ import { fmtRp, fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { klaimPendaftaran } from "@/lib/services/klaim";
+import { kanalManual } from "@/lib/services/laporan";
 import { detail } from "@/lib/services/pendaftaran";
 import { potong } from "@/lib/services/daftar";
 import { addDays } from "@/lib/services/tabungan";
@@ -21,7 +22,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const hal = <T,>(baris: T[], awalan: string) => potong(baris, pageNum(sp[`${awalan}_page`]), perNum(sp[`${awalan}_per`]));
   if (!Number.isSafeInteger(id) || id <= 0) notFound();
   const d = await detail(id).catch((e) => { if (e instanceof ApiError && e.status === 404) notFound(); throw e; });
-  const [user, klaim] = await Promise.all([getCurrentUser(), klaimPendaftaran(id)]);
+  const [user, klaim, metode] = await Promise.all([getCurrentUser(), klaimPendaftaran(id), kanalManual()]);
   const p = d.pendaftaran;
   const bisaKeuangan = !!user && can(user.peran, "keuangan");
   const bisaVerifikasi = !!user && can(user.peran, "verifikasi");
@@ -61,6 +62,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         bisaVerifikasi={bisaVerifikasi} bisaKeuangan={bisaKeuangan}
         tagihanBaru={d.tagihan_baru}
         tagihanBelumLunas={d.tagihan.filter((t) => t.status !== "lunas" && !t.menunggu_gateway).map((t) => ({ id: t.id, nomor: t.nomor, nominal: Number(t.nominal) }))}
+        metode={metode}
         tanggalMaks={addDays(d.hari_ini, -1)}
       />
 

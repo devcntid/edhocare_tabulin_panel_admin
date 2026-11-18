@@ -14,11 +14,12 @@ type Props = {
   tagihanBaru: { periode: string; nominal: number } | null;
   /** Unpaid bills the deposit can settle, and the latest allowed transfer date (yesterday, H+1). */
   tagihanBelumLunas: TagihanTerbuka[];
+  metode: { id: number; nama: string }[];
   tanggalMaks: string;
 };
 
 
-export function Actions({ id, status, bisaVerifikasi, bisaKeuangan, tagihanBaru, tagihanBelumLunas, tanggalMaks }: Props) {
+export function Actions({ id, status, bisaVerifikasi, bisaKeuangan, tagihanBaru, tagihanBelumLunas, metode, tanggalMaks }: Props) {
   const api = useApi();
   const [alasan, setAlasan] = useState("");
   const [tolak, setTolak] = useState(false);
@@ -59,10 +60,10 @@ export function Actions({ id, status, bisaVerifikasi, bisaKeuangan, tagihanBaru,
 
       {status === "aktif" && (
         <div className="space-y-5">
-          <p className="text-[13px] text-[#666]">Setoran dari bank atau gateway masuk otomatis ke buku besar. Untuk transfer bank manual yang sudah dicek di mutasi, konfirmasi dengan tombol di bawah. Kesalahan dikoreksi lewat baris koreksi.</p>
+          <p className="text-[13px] text-[#666]">Setoran dari bank atau gateway masuk otomatis ke buku besar. Untuk transfer bank manual atau tunai yang sudah dicek, konfirmasi dengan tombol di bawah. Kesalahan dikoreksi lewat baris koreksi.</p>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-[#eee] pt-4">
-            <KonfirmasiSetoran id={id} tagihan={tagihanBelumLunas} tanggalMaks={tanggalMaks} />
+            <KonfirmasiSetoran id={id} tagihan={tagihanBelumLunas} metode={metode} tanggalMaks={tanggalMaks} />
             {tagihanBaru && (
               <button className={btnSecondary} disabled={api.busy} onClick={() => api.call(`${base}/tagihan`, { periode: tagihanBaru.periode })}>
                 Terbitkan tagihan {tagihanBaru.periode} ({fmtRp(tagihanBaru.nominal)})

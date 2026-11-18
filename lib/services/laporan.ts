@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import type { JenisKanal } from "@/lib/format";
 import { ambilHalaman, cari, klausa, pilih, FILTER, paging, pages } from "@/lib/services/daftar";
 import { konfig, today } from "@/lib/services/pendaftaran";
 
@@ -110,9 +111,9 @@ export async function daftarTagihan(opts: { q?: string; status?: string; page?: 
 export async function daftarTransaksi(opts: { q?: string; jenis?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["t.nomor", "r.nama", "r.nomor"]), pilih(args, opts.jenis, FILTER.jenisTransaksi, "t.jenis")]);
-  return ambilHalaman<{ id: number; nomor: string; jenis: string; nominal_transaksi: number; tanggal_bayar: string; tanggal_konfirmasi: string; saldo_setelah: number; keterangan: string | null; pendaftaran_id: number; nama: string; nomor_pendaftaran: string }>({
+  return ambilHalaman<{ id: number; nomor: string; jenis: string; nominal_transaksi: number; tanggal_bayar: string; tanggal_konfirmasi: string; saldo_setelah: number; keterangan: string | null; pendaftaran_id: number; nama: string; nomor_pendaftaran: string; metode: string | null }>({
     dari: `transaksi t JOIN pendaftaran r ON r.id = t.pendaftaran_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "t.id DESC",
-    pilihan: "t.id, t.nomor, t.jenis, t.nominal_transaksi, t.tanggal_bayar, t.tanggal_konfirmasi, t.saldo_setelah, t.keterangan, t.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran",
+    pilihan: "t.id, t.nomor, t.jenis, t.nominal_transaksi, t.tanggal_bayar, t.tanggal_konfirmasi, t.saldo_setelah, t.keterangan, t.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran, (SELECT nama FROM kanal_pembayaran WHERE id = t.kanal_id) AS metode",
   });
 }
 
@@ -178,11 +179,16 @@ export async function daftarTemplat() {
 
 export async function daftarKanal() {
   const [kanal, instruksi] = await Promise.all([
-    pool.query("SELECT id, kode, nama, deskripsi, aktif FROM kanal_pembayaran ORDER BY id"),
+    pool.query("SELECT id, kode, nama, deskripsi, aktif, jenis FROM kanal_pembayaran ORDER BY id"),
     pool.query("SELECT id, kanal_id, judul, isi, nama_bank, nama_rekening, nomor_rekening, aktif FROM instruksi_pembayaran ORDER BY kanal_id, urutan, id"),
   ]);
-  return { kanal: kanal.rows as { id: number; kode: string; nama: string; deskripsi: string | null; aktif: boolean }[], instruksi: instruksi.rows as
+  return { kanal: kanal.rows as { id: number; kode: string; nama: string; deskripsi: string | null; aktif: boolean; jenis: JenisKanal }[], instruksi: instruksi.rows as
     { id: number; kanal_id: number; judul: string; isi: string; nama_bank: string | null; nama_rekening: string | null; nomor_rekening: string | null; aktif: boolean }[] };
+}
+
+/** Active methods finance can pick when confirming a deposit by hand (not the VA ones: those arrive on their own). */
+export async function kanalManual() {
+  return (await pool.query("SELECT id, nama FROM kanal_pembayaran WHERE aktif AND jenis IN ('transfer_manual','tunai') ORDER BY id")).rows as { id: number; nama: string }[];
 }
 
 export async function daftarLogApi(opts: { q?: string; hasil?: string; page?: number; per?: number; semua?: boolean }) {
