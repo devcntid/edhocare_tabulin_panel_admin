@@ -60,7 +60,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
         id={p.id} status={p.status_pendaftaran}
         bisaVerifikasi={bisaVerifikasi} bisaKeuangan={bisaKeuangan}
         tagihanBaru={d.tagihan_baru}
-        tagihanBelumLunas={d.tagihan.filter((t) => t.status !== "lunas").map((t) => ({ id: t.id, nomor: t.nomor, nominal: Number(t.nominal) }))}
+        tagihanBelumLunas={d.tagihan.filter((t) => t.status !== "lunas" && !t.menunggu_gateway).map((t) => ({ id: t.id, nomor: t.nomor, nominal: Number(t.nominal) }))}
         tanggalMaks={addDays(d.hari_ini, -1)}
       />
 

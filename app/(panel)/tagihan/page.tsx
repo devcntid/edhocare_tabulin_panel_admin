@@ -36,9 +36,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       sel: (g) => (
         <>
           <TombolDetail href={`/pendaftaran/${g.pendaftaran_id}`} />
-          {bisa && g.status_tampil !== "lunas" && g.status_pendaftaran === "aktif" && (
+          {bisa && g.status_tampil !== "lunas" && g.status_pendaftaran === "aktif" && !g.menunggu_gateway && (
             <KonfirmasiSetoran id={g.pendaftaran_id} tagihan={[{ id: g.id, nomor: g.nomor, nominal: Number(g.nominal) }]} awal={g.id} gaya="baris" tombol="Konfirmasi setoran" tanggalMaks={tanggalMaks} />
           )}
+          {g.menunggu_gateway && <span className="text-xs text-[#5b6b78]">Menunggu pembayaran gateway</span>}
           {bisa && g.status_tampil !== "lunas" && <PengingatButton id={g.id} nomor={g.nomor} lewat={g.status_tampil === "lewat_jatuh_tempo"} />}
         </>
       ),
