@@ -1,6 +1,6 @@
 # 11 – Daftar API Tabulin
 
-Daftar semua endpoint dan fungsinya. Hanya list dan fungsi, bukan spesifikasi lengkap (skema field ada di kode: `app/api/**/route.ts` dan `lib/services/*`; kontrak aplikasi pasien ada di `07-kontrak-data.md`). Per 2026-11-17, **55 endpoint** dalam 4 kelompok.
+Daftar semua endpoint dan fungsinya. Hanya list dan fungsi, bukan spesifikasi lengkap (skema field ada di kode: `app/api/**/route.ts` dan `lib/services/*`; kontrak aplikasi pasien ada di `07-kontrak-data.md`). Per 2026-11-17, **56 endpoint** dalam 4 kelompok.
 
 ## Cara membaca
 
@@ -44,6 +44,7 @@ Izin admin (`lib/permissions.ts`):
 | POST | `/api/pendaftaran/{id}/kedaluwarsa` | Tandai kedaluwarsa. | verifikasi |
 | POST | `/api/pendaftaran/{id}/pasang-va` | Pasang nomor VA (16 digit; kosong = dibuat otomatis), terbitkan tagihan DP, status menjadi `aktif`. | keuangan |
 | POST | `/api/pendaftaran/{id}/tagihan` | Terbitkan tagihan bulanan (`periode` YYYY-MM, opsional). | keuangan |
+| POST | `/api/pendaftaran/{id}/setoran` | Konfirmasi setoran manual dari transfer bank yang sudah dicek (`tanggal_bayar`, `nominal`, `tagihan_id` opsional). Tanggal harus sebelum hari ini (H+1), nominal tidak boleh kurang dari tagihan. Menambah saldo, melunasi tagihan, mengirim notifikasi. | keuangan |
 | POST | `/api/pendaftaran/{id}/selesai` | Tandai program selesai. | keuangan |
 | POST | `/api/tagihan/{id}/pengingat` | Kirim pengingat tagihan (notifikasi dari templat). | keuangan |
 | POST | `/api/transaksi/{id}/koreksi` | Koreksi transaksi dengan `alasan` (buku besar append-only: dibuat baris koreksi, bukan ubah). | keuangan |
@@ -146,7 +147,7 @@ Kode E-xx mengikuti kontrak. Daftar memakai paginasi cursor (`limit` 1–50, `cu
 
 ## Catatan
 
-- Setoran hanya masuk lewat `POST /api/integrasi/setoran` atau notifikasi gateway `POST /api/integrasi/midtrans`. Tidak ada endpoint admin untuk input setoran, dan data pasien tidak bisa diubah dari panel.
+- Setoran masuk lewat tiga jalur: `POST /api/integrasi/setoran`, notifikasi gateway `POST /api/integrasi/midtrans`, atau konfirmasi manual keuangan `POST /api/pendaftaran/{id}/setoran` (H+1). Admin selain itu hanya mengoreksi, dan data pasien tidak bisa diubah dari panel.
 - Klaim (E-13, E-15) tidak pernah mengubah saldo. Saldo hanya bertambah saat setoran sungguhan masuk, dan klaim otomatis menjadi `dikonfirmasi`.
 - Halaman panel (bukan API) ada di `app/(panel)/`; aturan halaman daftar di `08-standar-halaman.md`.
 - Cara menambah endpoint baru: bungkus dengan `handler(aksi, fn)` (`lib/api.ts`) untuk admin, `appHandler` (`lib/app-api.ts`) untuk aplikasi pasien.

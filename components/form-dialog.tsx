@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { fmtAngka } from "@/lib/format";
-import { btnPrimary, btnSecondary, input } from "@/components/ui";
+import { btnBaris, btnPrimary, btnSecondary, input } from "@/components/ui";
 
 type Props = {
   /** Text of the button that opens the dialog. */
@@ -39,13 +39,13 @@ export function FormDialog({ tombol, gaya = "utama", judul, desc, simpan = "Simp
 
   return (
     <>
-      <button type="button" className={gaya === "utama" ? btnPrimary : "rounded-lg border border-[#ddd] bg-white px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#f4f6f7]"} onClick={() => setBuka(true)}>{tombol}</button>
+      <button type="button" className={gaya === "utama" ? btnPrimary : "rounded-lg border border-[#cfdde8] bg-white px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#f4f6f7]"} onClick={() => setBuka(true)}>{tombol}</button>
       {buka && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && !busy && tutup()}>
           <form
             ref={ref}
             role="dialog" aria-modal="true" aria-label={judul}
-            className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+            className="w-full max-w-lg whitespace-normal rounded-2xl bg-white shadow-xl"
             onSubmit={async (e) => { e.preventDefault(); if (await onSubmit()) setBuka(false); }}
           >
             <div className="border-b border-[#eee] px-6 py-4">
@@ -97,8 +97,8 @@ export function StatusAktif({ aktif, kata = ["Aktif", "Nonaktif"] }: { aktif: bo
   );
 }
 
-/** Row-button class for plain actions next to <FormDialog gaya="baris">. */
-export const btnBaris = "rounded-lg border border-[#ddd] bg-white px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#f4f6f7] disabled:opacity-40";
+/** Row-button class for plain actions next to <FormDialog gaya="baris">. Lives in components/ui.ts so server components can use it. */
+export { btnBaris };
 
 /** Action cell: buttons side by side, right-aligned, never wrapped. */
 export function AksiBaris({ children }: { children: React.ReactNode }) {

@@ -18,5 +18,5 @@ const TONE: Record<string, string> = {
 export const label = (s: string) => s.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
 export function Badge({ value }: { value: string }) {
-  return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONE[value] ?? "bg-slate-100 text-slate-700"}`}>{label(value)}</span>;
+  return <span className={`inline-block whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-bold ${TONE[value] ?? "bg-slate-100 text-slate-700"}`}>{label(value)}</span>;
 }

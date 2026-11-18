@@ -2,55 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Baby, BedDouble, Building2, Bell, CalendarClock, ChevronRight, ClipboardList, CreditCard, FileText, History, LayoutDashboard, ListChecks, Menu, PanelLeftClose, PanelLeftOpen, Plug, ReceiptText, Settings, UserRound, Users, Wallet, X } from "lucide-react";
+import { Bell, CheckCircle2, ChevronDown, ChevronRight, Heart, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { can, PERAN_LABEL } from "@/lib/permissions";
 import type { Pengguna } from "@/lib/session";
+import type { NotifAdmin } from "@/lib/services/laporan";
 import { LogoutButton } from "@/components/logout-button";
+import { MENU } from "@/components/nav-menu";
 import { ToastHost } from "@/components/toast";
 
-type Item = { href: string; label: string; icon: typeof Bell; aksi?: "kelola_pengguna" };
-const SECTIONS: { title: string; items: Item[] }[] = [
-  { title: "Ringkasan", items: [{ href: "/", label: "Dasbor", icon: LayoutDashboard }] },
-  {
-    title: "Program",
-    items: [
-      { href: "/pasien", label: "Pasien", icon: UserRound },
-      { href: "/pendaftaran", label: "Pendaftaran", icon: ClipboardList },
-      { href: "/notifikasi", label: "Notifikasi", icon: Bell },
-      { href: "/templat", label: "Templat notifikasi", icon: FileText },
-    ],
-  },
-  {
-    title: "Keuangan",
-    items: [
-      { href: "/tagihan", label: "Tagihan", icon: ReceiptText },
-      { href: "/jadwal-cicilan", label: "Jadwal cicilan", icon: CalendarClock },
-      { href: "/setoran", label: "Setoran", icon: Wallet },
-      { href: "/log-api", label: "Log setoran API", icon: Plug },
-      { href: "/pembayaran", label: "Metode pembayaran", icon: CreditCard },
-      { href: "/instruksi-pembayaran", label: "Instruksi pembayaran", icon: ListChecks },
-    ],
-  },
-  {
-    title: "Data master",
-    items: [
-      { href: "/cara-persalinan", label: "Cara persalinan", icon: Baby },
-      { href: "/kelas-kamar", label: "Kelas kamar", icon: BedDouble },
-      { href: "/faskes", label: "Faskes", icon: Building2 },
-    ],
-  },
-  {
-    title: "Sistem",
-    items: [
-      { href: "/pengaturan", label: "Pengaturan", icon: Settings },
-      { href: "/audit", label: "Audit log", icon: History },
-      { href: "/pengguna", label: "Pengguna", icon: Users, aksi: "kelola_pengguna" },
-    ],
-  },
-];
-
-const LABEL = new Map(SECTIONS.flatMap((s) => s.items.map((i) => [i.href, i.label] as const)));
+const LABEL = new Map(MENU.flatMap((s) => s.items.map((i) => [i.href, i.label] as const)));
 const aktif = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
+const inisial = (nama: string) => nama.split(/\s+/).filter(Boolean).slice(0, 2).map((k) => k[0]?.toUpperCase()).join("") || "?";
 
 /** Breadcrumb from the URL: Dasbor / <menu> / <detail>. */
 function jejak(path: string): { label: string; href?: string }[] {
@@ -63,23 +25,28 @@ function jejak(path: string): { label: string; href?: string }[] {
   return out;
 }
 
-/** `ciut`: icon-only rail on desktop (md and up). The mobile drawer always shows full labels. */
-function Nav({ user, path, ciut }: { user: Pengguna; path: string; ciut: boolean }) {
+/** `ciut`: icon-only rail on desktop (md and up). The mobile drawer always shows full labels. `lencana`: counts shown on a menu entry. */
+function Nav({ user, path, ciut, lencana }: { user: Pengguna; path: string; ciut: boolean; lencana: Record<string, number> }) {
   return (
-    <nav aria-label="Menu utama" className="flex-1 space-y-4 overflow-y-auto px-2 pb-3">
-      {SECTIONS.map((sec) => {
+    <nav aria-label="Menu utama" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+      {MENU.map((sec) => {
         const items = sec.items.filter((n) => !n.aksi || can(user.peran, n.aksi));
         if (!items.length) return null;
         return (
-          <div key={sec.title} className="space-y-1">
-            <div className={`px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/75 ${ciut ? "md:hidden" : ""}`}>{sec.title}</div>
-            {ciut && <div aria-hidden className="mx-2 hidden border-t border-black/15 md:block" />}
-            {items.map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} title={ciut ? label : undefined} aria-current={aktif(path, href) ? "page" : undefined}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-semibold hover:bg-white/10 ${ciut ? "md:justify-center md:px-0" : ""} ${aktif(path, href) ? "bg-white/20 shadow-[inset_3px_0_0_var(--sekunder)]" : ""}`}>
-                <Icon size={16} className="shrink-0" /> <span className={ciut ? "md:sr-only" : ""}>{label}</span>
-              </Link>
-            ))}
+          <div key={sec.title} className="space-y-0.5">
+            <div className={`px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-white/70 ${ciut ? "md:hidden" : ""}`}>{sec.title}</div>
+            {ciut && <div aria-hidden className="mx-2 hidden border-t border-white/15 md:block" />}
+            {items.map(({ href, label, icon: Icon }) => {
+              const n = lencana[href];
+              return (
+                <Link key={href} href={href} title={ciut ? label : undefined} aria-current={aktif(path, href) ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-semibold transition-colors hover:bg-white/10 ${ciut ? "md:justify-center md:px-0" : ""} ${aktif(path, href) ? "bg-white/20 shadow-[inset_3px_0_0_var(--pink-merek)]" : "text-white/90"}`}>
+                  <Icon size={18} className="shrink-0" />
+                  <span className={`flex-1 ${ciut ? "md:sr-only" : ""}`}>{label}</span>
+                  {n ? <span aria-label={`${n} perlu tindakan`} className={`rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-bold text-amber-950 ${ciut ? "md:hidden" : ""}`}>{n}</span> : null}
+                </Link>
+              );
+            })}
           </div>
         );
       })}
@@ -87,7 +54,60 @@ function Nav({ user, path, ciut }: { user: Pengguna; path: string; ciut: boolean
   );
 }
 
-export function AppShell({ user, children }: { user: Pengguna; children: React.ReactNode }) {
+/** Bell with the admin's own to-do notifications (work waiting for them), not the messages sent to participants. */
+function BelAdmin({ notif }: { notif: NotifAdmin[] }) {
+  const [buka, setBuka] = useState(false);
+  const perlu = notif.filter((n) => n.jumlah > 0);
+  return (
+    <div className="relative">
+      <button onClick={() => setBuka((b) => !b)} aria-expanded={buka} aria-haspopup="menu" aria-label={perlu.length ? `Notifikasi admin, ${perlu.length} perlu tindakan` : "Notifikasi admin"} className="relative rounded-xl p-2 text-[#33454f] hover:bg-[#f1f6fa]">
+        <Bell size={20} />
+        {perlu.length > 0 && <span aria-hidden className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[var(--pink-merek)]" />}
+      </button>
+      {buka && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setBuka(false)} aria-hidden />
+          <div role="menu" className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-[#e1eaf2] bg-white p-2 shadow-lg">
+            <div className="px-2 pb-1.5 pt-1 text-xs font-bold uppercase tracking-wide text-[#5b6b78]">Perlu tindakan admin</div>
+            {perlu.length === 0 ? (
+              <p className="flex items-center gap-2 px-2 py-3 text-[13px] text-[#5b6b78]"><CheckCircle2 size={16} className="text-emerald-600" /> Tidak ada pekerjaan tertunda.</p>
+            ) : perlu.map((n) => (
+              <Link key={n.kunci} href={n.href} onClick={() => setBuka(false)} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-[13px] hover:bg-[#eef6fb]">
+                <span>{n.label}</span>
+                <span className="rounded-full bg-[var(--pink-merek)] px-2 py-0.5 text-[11px] font-bold text-white">{n.jumlah}</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MenuPengguna({ user }: { user: Pengguna }) {
+  const [buka, setBuka] = useState(false);
+  return (
+    <div className="relative">
+      <button onClick={() => setBuka((b) => !b)} aria-expanded={buka} aria-haspopup="menu" className="flex items-center gap-2.5 rounded-xl px-1.5 py-1 hover:bg-[#f1f6fa]">
+        <span aria-hidden className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] text-[13px] font-bold text-white">{inisial(user.nama)}</span>
+        <span className="hidden text-left text-[13px] leading-tight sm:block">
+          <span className="block font-bold">{user.nama}</span>
+          <span className="block text-xs text-[#5b6b78]">{PERAN_LABEL[user.peran]}</span>
+        </span>
+        <ChevronDown size={16} aria-hidden className="text-[#5b6b78]" />
+      </button>
+      {buka && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setBuka(false)} aria-hidden />
+          <div role="menu" className="absolute right-0 z-40 mt-2 w-44 rounded-xl border border-[#e1eaf2] bg-white p-1.5 shadow-lg"><LogoutButton /></div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function AppShell({ user, notif = [], children }: { user: Pengguna; notif?: NotifAdmin[]; children: React.ReactNode }) {
+  const menunggu = notif.find((n) => n.kunci === "verifikasi")?.jumlah ?? 0;
   const path = usePathname();
   const [buka, setBuka] = useState(false);
   const [ciut, setCiut] = useState(false);
@@ -107,37 +127,38 @@ export function AppShell({ user, children }: { user: Pengguna; children: React.R
   return (
     <div className="min-h-screen md:flex">
       {buka && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setBuka(false)} aria-hidden />}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-[var(--primary)] text-white transition-[transform,width] md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 ${ciut ? "md:w-16" : ""} ${buka ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className={`flex items-center justify-between px-4 py-4 ${ciut ? "md:justify-center md:px-0" : ""}`}>
-          <div className={`text-lg font-bold ${ciut ? "md:hidden" : ""}`}>Tabulin Admin</div>
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-[var(--primary)] text-white shadow-xl transition-[transform,width] md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 md:rounded-r-3xl ${ciut ? "md:w-[4.5rem]" : ""} ${buka ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className={`flex items-center gap-3 px-4 py-5 ${ciut ? "md:flex-col md:px-0" : ""}`}>
+          <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white"><Heart size={22} className="fill-[var(--pink-merek)] text-[var(--pink-merek)]" /></span>
+          <div className={`min-w-0 flex-1 leading-tight ${ciut ? "md:hidden" : ""}`}>
+            <div className="text-lg font-bold">Tabulin Admin</div>
+            <div className="truncate text-[11px] text-white/75">Pregnancy Savings Management</div>
+          </div>
           <button className="md:hidden" aria-label="Tutup menu" onClick={() => setBuka(false)}><X size={20} /></button>
-          <button className="hidden rounded-lg p-1 hover:bg-white/10 md:inline-flex" aria-label={ciut ? "Perluas menu samping" : "Ciutkan menu samping"} aria-expanded={!ciut} onClick={ubahCiut}>
-            {ciut ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          <button className="hidden rounded-lg border border-white/30 p-1.5 hover:bg-white/10 md:inline-flex" aria-label={ciut ? "Perluas menu samping" : "Ciutkan menu samping"} aria-expanded={!ciut} onClick={ubahCiut}>
+            {ciut ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
         </div>
-        <Nav user={user} path={path} ciut={ciut} />
+        <Nav user={user} path={path} ciut={ciut} lencana={{ "/pendaftaran": menunggu }} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-[#e5e7eb] bg-white px-4 md:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-[#e1eaf2] bg-white/95 px-4 backdrop-blur md:px-8">
           <div aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,var(--biru-merek),var(--accent),var(--pink-merek))]" />
           <button className="md:hidden" aria-label="Buka menu" aria-expanded={buka} onClick={() => setBuka(true)}><Menu size={20} /></button>
           <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
-            <ol className="flex items-center gap-1 overflow-hidden whitespace-nowrap text-[13px] text-[#666]">
+            <ol className="flex items-center gap-1 overflow-hidden whitespace-nowrap text-[13px] text-[#5b6b78]">
               {crumbs.map((c, i) => (
                 <li key={i} className="flex items-center gap-1">
                   {i > 0 && <ChevronRight size={14} aria-hidden />}
-                  {c.href ? <Link href={c.href} className="hover:underline">{c.label}</Link> : <span aria-current="page" className="font-semibold text-[#1a1a1a]">{c.label}</span>}
+                  {c.href ? <Link href={c.href} className="hover:underline">{c.label}</Link> : <span aria-current="page" className="font-bold text-[#14232e]">{c.label}</span>}
                 </li>
               ))}
             </ol>
           </nav>
-          <div className="hidden text-right text-[13px] leading-tight sm:block">
-            <div className="font-semibold">{user.nama}</div>
-            <div className="text-xs text-[#666]">{PERAN_LABEL[user.peran]}</div>
-          </div>
-          <div className="w-28"><LogoutButton dark /></div>
+          <BelAdmin notif={notif} />
+          <MenuPengguna user={user} />
         </header>
-        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       </div>
       <ToastHost />
     </div>

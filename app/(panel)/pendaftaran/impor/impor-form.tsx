@@ -39,7 +39,7 @@ export function ImporForm() {
 
   const bersih = hasil?.periksa && hasil.galat.length === 0;
   return (
-    <div className="space-y-5 rounded-2xl border border-[#e5e7eb] bg-white p-6">
+    <div className="space-y-5 rounded-2xl border border-[#e1eaf2] bg-white p-6">
       <div className="flex flex-wrap items-center gap-3">
         <input type="file" accept=".csv,text/csv" aria-label="File CSV" className={`${input} max-w-sm`} onChange={(e) => { setFile(e.target.files?.[0] ?? null); setHasil(null); setError(null); }} />
         <a href="/api/impor/pendaftaran/templat" className="text-[13px] font-semibold text-[var(--primary)]" download>Unduh templat CSV</a>
@@ -56,7 +56,7 @@ export function ImporForm() {
             : <p className="font-semibold text-red-600">{hasil.galat.length} baris bermasalah. Tidak ada yang disimpan. Perbaiki file lalu periksa lagi.</p>}
           {hasil.galat.length > 0 && (
             <table className="w-full border-collapse text-left">
-              <thead><tr className="border-b border-[#e5e7eb]"><th className="py-1 pr-3">Baris</th><th className="py-1 pr-3">No. RM</th><th className="py-1">Masalah</th></tr></thead>
+              <thead><tr className="border-b border-[#e1eaf2]"><th className="py-1 pr-3">Baris</th><th className="py-1 pr-3">No. RM</th><th className="py-1">Masalah</th></tr></thead>
               <tbody>{hasil.galat.map((g) => <tr key={`${g.baris}-${g.pesan}`} className="border-b border-[#f0f0f0]"><td className="py-1 pr-3 tabular-nums">{g.baris}</td><td className="py-1 pr-3">{g.no_rm || "-"}</td><td className="py-1">{g.pesan}</td></tr>)}</tbody>
             </table>
           )}

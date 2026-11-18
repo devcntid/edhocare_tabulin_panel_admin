@@ -9,8 +9,8 @@ type Point = { periode: string; nilai: number };
 
 function Panel({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
-      <h2 className="font-bold">{title}</h2>
+    <section className="rounded-2xl border border-[#e1eaf2] bg-white p-5 shadow-[0_1px_3px_rgba(16,64,96,0.06)]">
+      <h2 className="font-bold text-[#14232e]">{title}</h2>
       {note && <p className="mt-0.5 text-xs text-[#666]">{note}</p>}
       <div className="mt-4">{children}</div>
     </section>

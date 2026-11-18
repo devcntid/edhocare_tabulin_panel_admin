@@ -5,8 +5,25 @@ import { konfig, today } from "@/lib/services/pendaftaran";
 export { FILTER };
 import { badgeInfo, type TagihanLite } from "@/lib/services/tabungan";
 
+export type NotifAdmin = { kunci: string; label: string; jumlah: number; href: string };
+
+/** Notifications for the admin (bell and sidebar badge): work waiting for them. Not the messages sent to participants (/notifikasi). */
+export async function notifikasiAdmin(): Promise<NotifAdmin[]> {
+  const r = await pool.query(
+    `SELECT (SELECT count(*) FROM pendaftaran WHERE status_pendaftaran = 'menunggu_verifikasi')::int AS verifikasi,
+            (SELECT count(*) FROM pendaftaran WHERE status_pendaftaran = 'va_disiapkan')::int AS va,
+            (SELECT count(*) FROM v_tagihan_status g JOIN pendaftaran p ON p.id = g.pendaftaran_id
+              WHERE p.status_pendaftaran = 'aktif' AND g.status_tampil = 'lewat_jatuh_tempo')::int AS lewat`);
+  const n = r.rows[0];
+  return [
+    { kunci: "verifikasi", label: "Pendaftaran menunggu verifikasi", jumlah: n.verifikasi, href: "/pendaftaran?status=menunggu_verifikasi" },
+    { kunci: "va", label: "Pendaftaran menunggu pemasangan VA", jumlah: n.va, href: "/pendaftaran?status=va_disiapkan" },
+    { kunci: "lewat", label: "Tagihan lewat jatuh tempo", jumlah: n.lewat, href: "/tagihan?status=lewat_jatuh_tempo" },
+  ];
+}
+
 export async function dasbor() {
-  const [hitung, menunggu, aktif, tagihan, cfg, hariIni, setoranBulan, serieSetoran, seriePendaftaran, serieTagihan, perKelas, ringkas, terbaru, tempo, notifBaru] = await Promise.all([
+  const [hitung, menunggu, aktif, tagihan, cfg, hariIni, setoranBulan, serieSetoran, seriePendaftaran, serieTagihan, perKelas, ringkas, terbaru, tempo, aktivitas, pendaftaranBaru] = await Promise.all([
     pool.query("SELECT status_pendaftaran AS s, count(*)::int AS n FROM pendaftaran GROUP BY 1"),
     pool.query("SELECT id, nomor, nama, dibuat_pada FROM pendaftaran WHERE status_pendaftaran = 'menunggu_verifikasi' ORDER BY id LIMIT 8"),
     pool.query("SELECT v.*, f.nama AS faskes FROM v_pendaftaran_ringkas v JOIN faskes f ON f.id = v.faskes_id WHERE v.status_pendaftaran = 'aktif'"),
@@ -47,8 +64,9 @@ export async function dasbor() {
        FROM v_tagihan_status g JOIN pendaftaran r ON r.id = g.pendaftaran_id
        WHERE g.status = 'belum_dibayar' AND r.status_pendaftaran = 'aktif' ORDER BY g.jatuh_tempo, g.id LIMIT 8`),
     pool.query(
-      `SELECT n.id, n.judul, n.kategori, n.dibuat_pada, n.status_kirim, r.id AS pid, r.nama
-       FROM notifikasi n JOIN pendaftaran r ON r.id = n.pendaftaran_id ORDER BY n.id DESC LIMIT 6`),
+      `SELECT l.id, l.aksi, l.entitas, l.entitas_id, l.dibuat_pada, a.nama AS admin_nama
+       FROM audit_log l LEFT JOIN pengguna_admin a ON a.id = l.pengguna_id ORDER BY l.id DESC LIMIT 6`),
+    pool.query("SELECT id, nomor, nama, dibuat_pada, status_pendaftaran FROM pendaftaran ORDER BY id DESC LIMIT 5"),
   ]);
   const perStatus = Object.fromEntries(hitung.rows.map((r) => [r.s, r.n])) as Record<string, number>;
   const byPend = new Map<number, TagihanLite[]>();
@@ -75,42 +93,43 @@ export async function dasbor() {
     ringkas: ringkas.rows[0] as { pasien: number; transaksi: number; tagihan: number; piutang: number; diterima: number },
     terbaru: terbaru.rows as { nomor: string; jenis: string; nominal_transaksi: number; tanggal_bayar: string; sumber: string; pid: number; nama: string }[],
     tempo: tempo.rows as { id: number; nomor: string; nominal: number; jatuh_tempo: string; status_tampil: string; pid: number; nama: string }[],
-    notifBaru: notifBaru.rows as { id: number; judul: string; kategori: string; dibuat_pada: string; status_kirim: string; pid: number; nama: string }[],
+    pendaftaranBaru: pendaftaranBaru.rows as { id: number; nomor: string; nama: string; dibuat_pada: string; status_pendaftaran: string }[],
+    aktivitas: aktivitas.rows as { id: number; aksi: string; entitas: string; entitas_id: number | null; dibuat_pada: string; admin_nama: string | null }[],
   };
 }
 
-export async function daftarTagihan(opts: { q?: string; status?: string; page?: number; semua?: boolean }) {
+export async function daftarTagihan(opts: { q?: string; status?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["g.nomor", "r.nama", "r.nomor"]), pilih(args, opts.status, FILTER.statusTagihan, "g.status_tampil")]);
-  return ambilHalaman<{ id: number; nomor: string; jenis: string; periode: string; nominal: number; terbit_pada: string; jatuh_tempo: string; status_tampil: string; pendaftaran_id: number; nama: string; nomor_pendaftaran: string }>({
-    dari: `v_tagihan_status g JOIN pendaftaran r ON r.id = g.pendaftaran_id ${w}`, args, page: opts.page, semua: opts.semua, urut: "g.id DESC",
-    pilihan: "g.id, g.nomor, g.jenis, g.periode, g.nominal, g.terbit_pada, g.jatuh_tempo, g.status_tampil, g.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran",
+  return ambilHalaman<{ id: number; nomor: string; jenis: string; periode: string; nominal: number; terbit_pada: string; jatuh_tempo: string; status_tampil: string; pendaftaran_id: number; nama: string; nomor_pendaftaran: string; status_pendaftaran: string }>({
+    dari: `v_tagihan_status g JOIN pendaftaran r ON r.id = g.pendaftaran_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "g.id DESC",
+    pilihan: "g.id, g.nomor, g.jenis, g.periode, g.nominal, g.terbit_pada, g.jatuh_tempo, g.status_tampil, g.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran, r.status_pendaftaran",
   });
 }
 
-export async function daftarTransaksi(opts: { q?: string; jenis?: string; page?: number; semua?: boolean }) {
+export async function daftarTransaksi(opts: { q?: string; jenis?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["t.nomor", "r.nama", "r.nomor"]), pilih(args, opts.jenis, FILTER.jenisTransaksi, "t.jenis")]);
   return ambilHalaman<{ id: number; nomor: string; jenis: string; nominal_transaksi: number; tanggal_bayar: string; tanggal_konfirmasi: string; saldo_setelah: number; keterangan: string | null; pendaftaran_id: number; nama: string; nomor_pendaftaran: string }>({
-    dari: `transaksi t JOIN pendaftaran r ON r.id = t.pendaftaran_id ${w}`, args, page: opts.page, semua: opts.semua, urut: "t.id DESC",
+    dari: `transaksi t JOIN pendaftaran r ON r.id = t.pendaftaran_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "t.id DESC",
     pilihan: "t.id, t.nomor, t.jenis, t.nominal_transaksi, t.tanggal_bayar, t.tanggal_konfirmasi, t.saldo_setelah, t.keterangan, t.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran",
   });
 }
 
-export async function daftarNotifikasi(opts: { q?: string; kategori?: string; page?: number; semua?: boolean }) {
+export async function daftarNotifikasi(opts: { q?: string; kategori?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["n.judul", "r.nama", "n.templat_kode"]), pilih(args, opts.kategori, FILTER.kategoriNotifikasi, "n.kategori")]);
   return ambilHalaman<{ id: number; kategori: string; judul: string; isi: string; tujuan: string; tujuan_ref: string | null; dibuat_pada: string; pendaftaran_id: number; templat_kode: string | null; kanal: string; status_kirim: string; galat: string | null; nama: string }>({
-    dari: `notifikasi n JOIN pendaftaran r ON r.id = n.pendaftaran_id ${w}`, args, page: opts.page, semua: opts.semua, urut: "n.id DESC",
+    dari: `notifikasi n JOIN pendaftaran r ON r.id = n.pendaftaran_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "n.id DESC",
     pilihan: "n.id, n.kategori, n.judul, n.isi, n.tujuan, n.tujuan_ref, n.dibuat_pada, n.pendaftaran_id, n.templat_kode, n.kanal, n.status_kirim, n.galat, r.nama",
   });
 }
 
-export async function daftarAudit(opts: { q?: string; page?: number; semua?: boolean }) {
+export async function daftarAudit(opts: { q?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["l.aksi", "l.entitas", "a.nama"])]);
   return ambilHalaman<{ id: number; aksi: string; entitas: string; entitas_id: number | null; sesudah: unknown; dibuat_pada: string; admin_nama: string | null }>({
-    dari: `audit_log l LEFT JOIN pengguna_admin a ON a.id = l.pengguna_id ${w}`, args, page: opts.page, semua: opts.semua, urut: "l.id DESC",
+    dari: `audit_log l LEFT JOIN pengguna_admin a ON a.id = l.pengguna_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "l.id DESC",
     pilihan: "l.id, l.aksi, l.entitas, l.entitas_id, l.sesudah, l.dibuat_pada, a.nama AS admin_nama",
   });
 }
@@ -120,8 +139,8 @@ export async function daftarKonfigurasi() {
 }
 
 /** Patients are read-only master data (to be filled from the hospital/customer-app API). */
-export async function daftarPasien(opts: { q?: string; page?: number; semua?: boolean }) {
-  const { p, limit, offset } = paging(opts.page, opts.semua);
+export async function daftarPasien(opts: { q?: string; page?: number; per?: number; semua?: boolean }) {
+  const { p, per, limit, offset } = paging(opts.page, opts.semua, opts.per);
   const args: unknown[] = [];
   let w = "";
   if (opts.q?.trim()) {
@@ -136,7 +155,7 @@ export async function daftarPasien(opts: { q?: string; page?: number; semua?: bo
     LEFT JOIN LATERAL (SELECT count(*)::int AS jumlah, sum(saldo) AS saldo FROM v_pendaftaran_ringkas v WHERE v.no_rm = p.no_rm) c ON true`;
   const total = (await pool.query(`SELECT count(*)::int AS n FROM (${base}) x ${w}`, args)).rows[0].n as number;
   const { rows } = await pool.query(`SELECT * FROM (${base}) x ${w} ORDER BY nama LIMIT ${limit} OFFSET ${offset}`, args);
-  return { rows, total, page: p, pages: pages(total) };
+  return { rows, total, page: p, per, pages: pages(total, per) };
 }
 
 export async function detailPasien(noRm: string) {
@@ -166,19 +185,19 @@ export async function daftarKanal() {
     { id: number; kanal_id: number; judul: string; isi: string; nama_bank: string | null; nama_rekening: string | null; nomor_rekening: string | null; aktif: boolean }[] };
 }
 
-export async function daftarLogApi(opts: { q?: string; hasil?: string; page?: number; semua?: boolean }) {
+export async function daftarLogApi(opts: { q?: string; hasil?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["l.no_va", "l.referensi", "l.nomor_transaksi"]), pilih(args, opts.hasil, FILTER.hasilApi, "l.hasil")]);
   return ambilHalaman<{ id: number; diterima_pada: string; no_va: string | null; referensi: string | null; tanggal_bayar: string | null; nominal: number | null; hasil: string; nomor_transaksi: string | null; kode_galat: string | null; pesan: string | null }>({
-    dari: `log_setoran_api l ${w}`, args, page: opts.page, semua: opts.semua, urut: "l.id DESC", pilihan: "l.*",
+    dari: `log_setoran_api l ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "l.id DESC", pilihan: "l.*",
   });
 }
 
-export async function daftarJadwal(opts: { q?: string; status?: string; page?: number; semua?: boolean }) {
+export async function daftarJadwal(opts: { q?: string; status?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["r.nama", "r.nomor", "j.nomor_tagihan"]), pilih(args, opts.status, FILTER.statusJadwal, "j.status_tampil")]);
   return ambilHalaman<{ id: number; pendaftaran_id: number; urutan: number; periode: string; jatuh_tempo: string; nominal: number; status_tampil: string; nomor_tagihan: string | null; nama: string; nomor: string; jumlah_cicilan: number }>({
-    dari: `v_jadwal_cicilan j JOIN pendaftaran r ON r.id = j.pendaftaran_id ${w}`, args, page: opts.page, semua: opts.semua, urut: "j.jatuh_tempo, j.pendaftaran_id, j.urutan",
+    dari: `v_jadwal_cicilan j JOIN pendaftaran r ON r.id = j.pendaftaran_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "j.jatuh_tempo, j.pendaftaran_id, j.urutan",
     pilihan: "j.id, j.pendaftaran_id, j.urutan, j.periode, j.jatuh_tempo, j.nominal, j.status_tampil, j.nomor_tagihan, r.nama, r.nomor, r.jumlah_cicilan",
   });
 }

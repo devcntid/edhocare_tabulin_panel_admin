@@ -1,7 +1,8 @@
 import { label } from "@/components/badge";
 import { CariInput, FilterBar, Halaman, PageHeader, Pilih } from "@/components/page";
-import { Table, one } from "@/components/table";
+import { Pager, Table, one, pageNum, perNum } from "@/components/table";
 import { can } from "@/lib/permissions";
+import { potong } from "@/lib/services/daftar";
 import { getCurrentUser } from "@/lib/session";
 import { FILTER, daftarTemplat } from "@/lib/services/laporan";
 import { TemplatBaris } from "./templat-baris";
@@ -14,6 +15,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const [semua, user] = await Promise.all([daftarTemplat(), getCurrentUser()]);
   const bisa = !!user && can(user.peran, "verifikasi");
   const templat = semua.filter((t) => (!kategori || t.kategori === kategori) && (!q || `${t.nama} ${t.judul} ${t.isi} ${t.kode}`.toLowerCase().includes(q)));
+  const h = potong(templat, pageNum(sp.page), perNum(sp.per));
   return (
     <Halaman>
       <PageHeader
@@ -25,8 +27,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         <Pilih name="kategori" defaultValue={kategori} semua="Semua kategori" opsi={FILTER.kategoriNotifikasi.map((k) => [k, label(k)] as const)} />
       </FilterBar>
       <Table head={["Templat", "Kategori", "Judul", "Isi pesan", "Variabel", "Status", ...(bisa ? ["Aksi"] : [])]} empty={!templat.length} filtered={!!(qMentah || kategori)} resetHref="/templat">
-        {templat.map((t) => <TemplatBaris key={t.kode} t={{ ...t, kategoriLabel: label(t.kategori) }} bisa={bisa} kategori={FILTER.kategoriNotifikasi.map((k) => [k, label(k)] as const)} />)}
+        {h.rows.map((t) => <TemplatBaris key={t.kode} t={{ ...t, kategoriLabel: label(t.kategori) }} bisa={bisa} kategori={FILTER.kategoriNotifikasi.map((k) => [k, label(k)] as const)} />)}
       </Table>
+      <Pager basis="/templat" params={{ q: qMentah, kategori }} page={h.page} pages={h.pages} total={h.total} per={h.per} />
     </Halaman>
   );
 }

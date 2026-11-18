@@ -51,7 +51,7 @@ export function BaruForm({ opsi, hariIni }: { opsi: Opsi; hariIni: string }) {
   const galat = (k: string) => fields[k] && <span className="text-xs font-normal text-red-600">{fields[k]}</span>;
 
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-[#e5e7eb] bg-white p-6">
+    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-[#e1eaf2] bg-white p-6">
       <fieldset className="grid gap-4">
         <legend className="mb-1 text-sm font-bold">Pasien</legend>
         <Field label="Pilih pasien" hint="Ketik nama, No. RM, atau No. HP untuk mencari. Data pasien berasal dari sistem RS.">
@@ -88,7 +88,7 @@ export function BaruForm({ opsi, hariIni }: { opsi: Opsi; hariIni: string }) {
           <dl className="grid gap-1 rounded-lg bg-[#f4f5f7] px-3 py-2 text-[13px]">
             <div className="flex justify-between"><dt>Cara persalinan ({v.cara})</dt><dd className="tabular-nums">{fmtRp(hCara!)}</dd></div>
             <div className="flex justify-between"><dt>Kelas kamar ({v.kelas})</dt><dd className="tabular-nums">{fmtRp(hKelas!)}</dd></div>
-            <div className="flex justify-between border-t border-[#ddd] pt-1 font-bold"><dt>Total biaya</dt><dd className="tabular-nums">{fmtRp(total)}</dd></div>
+            <div className="flex justify-between border-t border-[#cfdde8] pt-1 font-bold"><dt>Total biaya</dt><dd className="tabular-nums">{fmtRp(total)}</dd></div>
             <p className="pt-1 text-xs text-[#666]">{kelas.tier} · setoran minimum {fmtRp(kelas.setoran_min_bulanan)}/bulan. Sisa biaya dilunasi di akhir memakai saldo tabungan.</p>
           </dl>
         )}

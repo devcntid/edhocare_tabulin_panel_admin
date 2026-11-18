@@ -1,12 +1,13 @@
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool } from "@/lib/db";
+import { PAGE_SIZE, PER_HALAMAN, perValid } from "@/lib/paging";
 import { ApiError } from "@/lib/api";
 import { daftarMaster, paketUntuk, tarifPaket } from "@/lib/services/master";
 import { badgeInfo, daysBetween, hitungPaket, nominalTagihan, periodeDefault, periodsAfter, type PaketInfo, type Rencana, type TagihanLite } from "@/lib/services/tabungan";
 
 export const STATUS = ["menunggu_verifikasi", "va_disiapkan", "aktif", "selesai", "ditolak", "kedaluwarsa"] as const;
-export const PAGE_SIZE = 15;
+export { PAGE_SIZE, PER_HALAMAN, perValid };
 /** Row cap of one export file. */
 export const EKSPOR_MAKS = 10_000;
 
@@ -15,10 +16,11 @@ export type Ringkas = {
   faskes: string; kelas_kamar: string; cara_persalinan: string; saldo: number; progres_ke_50: number; dibuat_pada: string;
 };
 
-export async function daftar(opts: { q?: string; status?: string; page?: number; semua?: boolean }) {
+export async function daftar(opts: { q?: string; status?: string; page?: number; per?: number; semua?: boolean }) {
   const page = Math.max(1, opts.page ?? 1);
-  const limit = opts.semua ? EKSPOR_MAKS : PAGE_SIZE;
-  const offset = opts.semua ? 0 : (page - 1) * PAGE_SIZE;
+  const per = perValid(opts.per);
+  const limit = opts.semua ? EKSPOR_MAKS : per;
+  const offset = opts.semua ? 0 : (page - 1) * per;
   const where: string[] = [];
   const args: unknown[] = [];
   if (opts.q?.trim()) {
@@ -37,7 +39,7 @@ export async function daftar(opts: { q?: string; status?: string; page?: number;
             v.saldo, v.progres_ke_50, v.dibuat_pada ${from} ORDER BY v.id DESC LIMIT ${limit} OFFSET ${offset}`,
     args,
   );
-  return { rows: rows as Ringkas[], total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
+  return { rows: rows as Ringkas[], total, page, per, pages: Math.max(1, Math.ceil(total / per)) };
 }
 
 export async function konfig(): Promise<{ hari: number; toleransi: number; batasUsia: number; dpPersen: number; targetPersen: number; milestoneMinggu: number; hplMinggu: number; klaimAktif: boolean }> {
@@ -198,6 +200,18 @@ export async function opsiForm() {
     kelas: m.kelas.filter((k) => k.aktif).map((k) => ({ nama: k.nama, harga: k.harga, tier: k.tier, setoran_min_bulanan: k.setoran_min_bulanan })) as (OpsiHarga & { tier: string; setoran_min_bulanan: number })[],
     pasien: pasien.rows as OpsiPasien[],
   };
+}
+
+const setoranSchema = z.object({
+  tanggal_bayar: z.string("Field ini wajib diisi.").regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD."),
+  nominal: z.coerce.number("Nominal harus berupa angka.").int("Nominal harus bilangan bulat.").positive("Nominal harus lebih dari 0.").max(10_000_000_000),
+  tagihan_id: z.number().int().positive().nullable().optional(),
+});
+
+/** Manual deposit confirmation by finance (bank transfer checked the next day). Rules (H+1, under-payment, ownership of the bill) live in konfirmasi_setoran. */
+export async function konfirmasiSetoranManual(id: number, raw: unknown, adminId: number) {
+  const b = setoranSchema.parse(raw);
+  return panggil("konfirmasi_setoran", [id, b.tanggal_bayar, b.nominal, b.tagihan_id ?? null, adminId]);
 }
 
 /** Run a DB state-transition function and return its row. */

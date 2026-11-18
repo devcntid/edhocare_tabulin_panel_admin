@@ -45,7 +45,7 @@ export function ConfirmButton({ label, className, title, message, confirmLabel =
       <button type="button" className={className} disabled={disabled} onClick={() => setOpen(true)}>{label}</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && !busy && setOpen(false)}>
-          <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-md space-y-3 rounded-2xl bg-white p-5 shadow-xl">
+          <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-md space-y-3 whitespace-normal rounded-2xl bg-white p-5 shadow-xl">
             <h2 className="text-base font-bold">{title}</h2>
             {message && <p className="text-[13px] text-[#555]">{message}</p>}
             {inputLabel && (

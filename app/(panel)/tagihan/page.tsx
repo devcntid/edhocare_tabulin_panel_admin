@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { Badge } from "@/components/badge";
 import { HalamanDaftar, type Kolom } from "@/components/halaman-daftar";
+import { KonfirmasiSetoran } from "@/components/konfirmasi-setoran";
+import { TombolDetail } from "@/components/page";
 import { PengingatButton } from "@/components/pengingat-button";
-import { one, pageNum } from "@/components/table";
+import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { daftarTagihan } from "@/lib/services/laporan";
+import { today } from "@/lib/services/pendaftaran";
+import { addDays } from "@/lib/services/tabungan";
 
 type Baris = Awaited<ReturnType<typeof daftarTagihan>>["rows"][number];
 
@@ -14,9 +18,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const status = one(sp.status) ?? "";
-  const data = await daftarTagihan({ q, status, page: pageNum(sp.page) });
+  const data = await daftarTagihan({ q, status, page: pageNum(sp.page), per: perNum(sp.per) });
   const user = await getCurrentUser();
   const bisa = !!user && can(user.peran, "keuangan");
+  const tanggalMaks = addDays(await today(), -1);
   const kolom: Kolom<Baris>[] = [
     { judul: "No. tagihan", sel: (g) => g.nomor },
     { judul: "Peserta", sel: (g) => <Link className="font-semibold text-[var(--primary)]" href={`/pendaftaran/${g.pendaftaran_id}`}>{g.nama}</Link> },
@@ -26,7 +31,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     { judul: "Terbit", sel: (g) => fmtTgl(g.terbit_pada) },
     { judul: "Jatuh tempo", sel: (g) => fmtTgl(g.jatuh_tempo) },
     { judul: "Status", sel: (g) => <Badge value={g.status_tampil} /> },
-    ...(bisa ? [{ judul: "", sel: (g: Baris) => (g.status_tampil !== "lunas" ? <PengingatButton id={g.id} nomor={g.nomor} lewat={g.status_tampil === "lewat_jatuh_tempo"} /> : null) }] : []),
+    {
+      judul: "Aksi", tipe: "aksi",
+      sel: (g) => (
+        <>
+          <TombolDetail href={`/pendaftaran/${g.pendaftaran_id}`} />
+          {bisa && g.status_tampil !== "lunas" && g.status_pendaftaran === "aktif" && (
+            <KonfirmasiSetoran id={g.pendaftaran_id} tagihan={[{ id: g.id, nomor: g.nomor, nominal: Number(g.nominal) }]} awal={g.id} gaya="baris" tombol="Konfirmasi setoran" tanggalMaks={tanggalMaks} />
+          )}
+          {bisa && g.status_tampil !== "lunas" && <PengingatButton id={g.id} nomor={g.nomor} lewat={g.status_tampil === "lewat_jatuh_tempo"} />}
+        </>
+      ),
+    },
   ];
   return (
     <HalamanDaftar ekspor="tagihan"
