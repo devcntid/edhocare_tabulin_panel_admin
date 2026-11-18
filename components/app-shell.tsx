@@ -1,8 +1,9 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, CheckCircle2, ChevronDown, ChevronRight, Heart, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { Bell, CheckCircle2, ChevronDown, ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { can, PERAN_LABEL } from "@/lib/permissions";
 import type { Pengguna } from "@/lib/session";
 import type { NotifAdmin } from "@/lib/services/laporan";
@@ -129,11 +130,11 @@ export function AppShell({ user, notif = [], children }: { user: Pengguna; notif
       {buka && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setBuka(false)} aria-hidden />}
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-[var(--primary)] text-white shadow-xl transition-[transform,width] md:sticky md:top-0 md:h-screen md:shrink-0 md:translate-x-0 md:rounded-r-3xl ${ciut ? "md:w-[4.5rem]" : ""} ${buka ? "translate-x-0" : "-translate-x-full"}`}>
         <div className={`flex items-center gap-3 px-4 py-5 ${ciut ? "md:flex-col md:px-0" : ""}`}>
-          <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white"><Heart size={22} className="fill-[var(--pink-merek)] text-[var(--pink-merek)]" /></span>
-          <div className={`min-w-0 flex-1 leading-tight ${ciut ? "md:hidden" : ""}`}>
-            <div className="text-lg font-bold">Tabulin Admin</div>
-            <div className="truncate text-[11px] text-white/75">Pregnancy Savings Management</div>
-          </div>
+          {/* White plate: the logo's grey wordmark would not read on the blue sidebar. Collapsed rail shows the butterfly mark only. */}
+          <Link href="/" aria-label="Tabulin Admin, ke dasbor" className={`flex h-11 min-w-0 flex-1 items-center rounded-xl bg-white px-3 ${ciut ? "md:h-10 md:w-10 md:flex-none md:justify-center md:p-1.5" : ""}`}>
+            <Image src="/logo.png" alt="Edelweiss Healthcare Group" width={1578} height={466} priority className={`h-auto max-h-8 w-auto max-w-full object-contain ${ciut ? "md:hidden" : ""}`} />
+            <Image src="/logo-mark.png" alt="" aria-hidden width={256} height={256} className={`hidden h-full w-full object-contain ${ciut ? "md:block" : ""}`} />
+          </Link>
           <button className="md:hidden" aria-label="Tutup menu" onClick={() => setBuka(false)}><X size={20} /></button>
           <button className="hidden rounded-lg border border-white/30 p-1.5 hover:bg-white/10 md:inline-flex" aria-label={ciut ? "Perluas menu samping" : "Ciutkan menu samping"} aria-expanded={!ciut} onClick={ubahCiut}>
             {ciut ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
