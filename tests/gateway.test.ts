@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { config } from "dotenv";
@@ -16,13 +15,12 @@ let app: App, gw: Gateway, db: Client, admin: number, tagihan: string, nominal: 
 const pasien = (no_rm: string) => ({ no_rm, nama: `Pasien ${no_rm}`, no_hp: "081200000001" });
 const galat = async (p: Promise<unknown>) => p.then(() => null, async (e) => (await import("@/lib/api")).toApiError(e));
 
-function sign(order_id: string, status_code: string, gross_amount: string) {
-  return createHash("sha512").update(`${order_id}${status_code}${gross_amount}SB-Mid-server-test`).digest("hex");
+const notif = (order_id: string) => ({ order_id, status_code: "200", transaction_status: "settlement", signature_key: "not-checked" }); // the body is never believed
+/** What Midtrans answers when the server asks for the order's status. */
+function mockStatus(order_id: string, o: Record<string, string> = {}) {
+  const body = JSON.stringify({ status_code: "200", order_id, gross_amount: `${nominal}.00`, transaction_status: "settlement", fraud_status: "accept", ...o });
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(body, { status: 200 })); // a fresh Response per call: a body can be read once
 }
-const notif = (order_id: string, o: Record<string, string> = {}) => {
-  const gross_amount = o.gross_amount ?? `${nominal}.00`;
-  return { order_id, status_code: "200", gross_amount, transaction_status: "settlement", transaction_id: "mid-1", signature_key: sign(order_id, "200", gross_amount), ...o };
-};
 const saldo = async () => Number((await db.query("SELECT coalesce(sum(nominal_transaksi),0) AS s FROM transaksi")).rows[0].s);
 
 function mockCharge(body: object = { status_code: "201", transaction_id: "mid-1", va_numbers: [{ bank: "bca", va_number: "11111222223333" }] }) {
@@ -87,22 +85,32 @@ describe("notification (callback)", () => {
     order = (await gw.checkoutTagihan(pasien("RM-1"), tagihan, {})).id_pembayaran;
   });
 
-  it("refuses a bad signature, an unknown order and a wrong amount without crediting", async () => {
-    expect(await galat(gw.terimaNotifikasiMidtrans({ ...notif(order), signature_key: "salah" }))).toMatchObject({ status: 401 });
+  it("refuses a body without order_id, an order Midtrans or the panel does not know, a wrong amount and an unreachable gateway", async () => {
+    expect(await galat(gw.terimaNotifikasiMidtrans({ status_code: "200" }))).toMatchObject({ status: 401 });
+    mockStatus("INV-X-tidak-ada", { status_code: "404" });
     expect(await galat(gw.terimaNotifikasiMidtrans(notif("INV-X-tidak-ada")))).toMatchObject({ status: 404 });
-    expect(await galat(gw.terimaNotifikasiMidtrans(notif(order, { gross_amount: "1000.00", signature_key: sign(order, "200", "1000.00") })))).toMatchObject({ status: 422, code: "NOMINAL_TIDAK_SESUAI" });
+    vi.restoreAllMocks();
+    mockStatus("INV-Y-hanya-di-midtrans");
+    expect(await galat(gw.terimaNotifikasiMidtrans(notif("INV-Y-hanya-di-midtrans")))).toMatchObject({ status: 404 });
+    vi.restoreAllMocks();
+    mockStatus(order, { gross_amount: "1000.00" });
+    expect(await galat(gw.terimaNotifikasiMidtrans(notif(order)))).toMatchObject({ status: 422, code: "NOMINAL_TIDAK_SESUAI" });
+    vi.restoreAllMocks();
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("down"));
+    expect(await galat(gw.terimaNotifikasiMidtrans(notif(order)))).toMatchObject({ status: 502, code: "GATEWAY_GAGAL" });
     expect(await saldo()).toBe(0);
-    // each refusal leaves a trace in Log Setoran API
-    const kode = (await db.query("SELECT kode_galat FROM log_setoran_api WHERE referensi IN ($1,'INV-X-tidak-ada') ORDER BY id", [order])).rows.map((x) => x.kode_galat);
-    expect(kode).toEqual(["TANDA_TANGAN_TIDAK_VALID", "PESANAN_TIDAK_DIKENAL", "NOMINAL_TIDAK_SESUAI"]);
+    const kode = (await db.query("SELECT kode_galat FROM log_setoran_api WHERE referensi IS NULL OR referensi IN ($1,'INV-X-tidak-ada','INV-Y-hanya-di-midtrans') ORDER BY id", [order])).rows.map((x) => x.kode_galat);
+    expect(kode).toEqual(["NOTIFIKASI_TIDAK_VALID", "PESANAN_TIDAK_DIKENAL", "PESANAN_TIDAK_DIKENAL", "NOMINAL_TIDAK_SESUAI"]);
   });
 
-  it("keeps the order waiting on a pending notification", async () => {
-    expect(await gw.terimaNotifikasiMidtrans(notif(order, { transaction_status: "pending", status_code: "201", signature_key: sign(order, "201", `${nominal}.00`) }))).toMatchObject({ status: "menunggu" });
+  it("believes Midtrans, not the notification body: a body claiming settlement while Midtrans says pending credits nothing", async () => {
+    mockStatus(order, { status_code: "201", transaction_status: "pending" });
+    expect(await gw.terimaNotifikasiMidtrans(notif(order))).toMatchObject({ status: "menunggu" });
     expect(await saldo()).toBe(0);
   });
 
   it("settlement credits the balance, pays the bill and logs; a repeat does not credit twice", async () => {
+    mockStatus(order);
     const r = await gw.terimaNotifikasiMidtrans(notif(order));
     expect(r).toMatchObject({ status: "berhasil", nomor_transaksi: expect.stringMatching(/^TRX-/) });
     expect(await saldo()).toBe(nominal);
@@ -110,7 +118,7 @@ describe("notification (callback)", () => {
     expect((await db.query("SELECT sumber FROM transaksi WHERE ref_eksternal = $1", [order])).rows[0].sumber).toBe("api");
     await gw.terimaNotifikasiMidtrans(notif(order));
     expect(await saldo()).toBe(nominal);
-    expect((await db.query("SELECT hasil FROM log_setoran_api WHERE referensi = $1 ORDER BY id", [order])).rows.map((x) => x.hasil)).toEqual(["ditolak", "ditolak", "diterima", "duplikat"]); // the first two are the earlier bad-signature and wrong-amount refusals
+    expect((await db.query("SELECT hasil FROM log_setoran_api WHERE referensi = $1 ORDER BY id", [order])).rows.map((x) => x.hasil)).toEqual(["ditolak", "diterima", "duplikat"]); // the first is the earlier wrong-amount refusal
     expect((await db.query("SELECT status FROM pembayaran_gateway WHERE order_id = $1", [order])).rows[0].status).toBe("berhasil");
   });
 
