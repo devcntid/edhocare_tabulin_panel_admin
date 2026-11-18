@@ -101,9 +101,9 @@ export async function dasbor() {
 export async function daftarTagihan(opts: { q?: string; status?: string; page?: number; per?: number; semua?: boolean }) {
   const args: unknown[] = [];
   const w = klausa([cari(args, opts.q, ["g.nomor", "r.nama", "r.nomor"]), pilih(args, opts.status, FILTER.statusTagihan, "g.status_tampil")]);
-  return ambilHalaman<{ id: number; nomor: string; jenis: string; periode: string; nominal: number; terbit_pada: string; jatuh_tempo: string; status_tampil: string; pendaftaran_id: number; nama: string; nomor_pendaftaran: string; status_pendaftaran: string }>({
+  return ambilHalaman<{ id: number; nomor: string; jenis: string; periode: string; nominal: number; terbit_pada: string; jatuh_tempo: string; status_tampil: string; pendaftaran_id: number; nama: string; nomor_pendaftaran: string; status_pendaftaran: string; menunggu_gateway: boolean }>({
     dari: `v_tagihan_status g JOIN pendaftaran r ON r.id = g.pendaftaran_id ${w}`, args, page: opts.page, per: opts.per, semua: opts.semua, urut: "g.id DESC",
-    pilihan: "g.id, g.nomor, g.jenis, g.periode, g.nominal, g.terbit_pada, g.jatuh_tempo, g.status_tampil, g.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran, r.status_pendaftaran",
+    pilihan: "g.id, g.nomor, g.jenis, g.periode, g.nominal, g.terbit_pada, g.jatuh_tempo, g.status_tampil, g.pendaftaran_id, r.nama, r.nomor AS nomor_pendaftaran, r.status_pendaftaran, EXISTS (SELECT 1 FROM pembayaran_gateway pg WHERE pg.tagihan_id = g.id AND pg.status = 'menunggu') AS menunggu_gateway",
   });
 }
 

@@ -44,7 +44,7 @@ Izin admin (`lib/permissions.ts`):
 | POST | `/api/pendaftaran/{id}/kedaluwarsa` | Tandai kedaluwarsa. | verifikasi |
 | POST | `/api/pendaftaran/{id}/pasang-va` | Pasang nomor VA (16 digit; kosong = dibuat otomatis), terbitkan tagihan DP, status menjadi `aktif`. | keuangan |
 | POST | `/api/pendaftaran/{id}/tagihan` | Terbitkan tagihan bulanan (`periode` YYYY-MM, opsional). | keuangan |
-| POST | `/api/pendaftaran/{id}/setoran` | Konfirmasi setoran manual dari transfer bank yang sudah dicek (`tanggal_bayar`, `nominal`, `tagihan_id` opsional). Tanggal harus sebelum hari ini (H+1), nominal tidak boleh kurang dari tagihan. Menambah saldo, melunasi tagihan, mengirim notifikasi. | keuangan |
+| POST | `/api/pendaftaran/{id}/setoran` | Konfirmasi setoran manual dari transfer bank yang sudah dicek (`tanggal_bayar`, `nominal`, `tagihan_id` opsional). Tanggal harus sebelum hari ini (H+1), nominal tidak boleh kurang dari tagihan. Hanya untuk jalur transfer bank manual: tagihan yang punya pembayaran gateway berstatus menunggu ditolak (409 `MENUNGGU_GATEWAY`), karena callback gateway yang mengkonfirmasinya. Menambah saldo, melunasi tagihan, mengirim notifikasi. | keuangan |
 | POST | `/api/pendaftaran/{id}/selesai` | Tandai program selesai. | keuangan |
 | POST | `/api/tagihan/{id}/pengingat` | Kirim pengingat tagihan (notifikasi dari templat). | keuangan |
 | POST | `/api/transaksi/{id}/koreksi` | Koreksi transaksi dengan `alasan` (buku besar append-only: dibuat baris koreksi, bukan ubah). | keuangan |

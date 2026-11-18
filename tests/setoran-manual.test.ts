@@ -63,6 +63,13 @@ describe("manual deposit confirmation (finance)", () => {
     expect(await saldo(pid)).toBe(0);
   });
 
+  it("refuses manual confirmation while a gateway payment is waiting for the bill, and allows it again once that charge expired", async () => {
+    await db.query("INSERT INTO pembayaran_gateway (order_id, pendaftaran_id, tagihan_id, nominal, bank, nomor_va) VALUES ('ORD-MANUAL-1',$1,$2,$3,'bca','111')", [pid, tagihan.id, tagihan.nominal]);
+    expect(await galat(svc.konfirmasiSetoranManual(pid, { tanggal_bayar: kemarin, nominal: tagihan.nominal, tagihan_id: tagihan.id }, admin))).toMatchObject({ code: "MENUNGGU_GATEWAY", status: 409 });
+    expect(await saldo(pid)).toBe(0);
+    await db.query("UPDATE pembayaran_gateway SET status = 'kedaluwarsa' WHERE order_id = 'ORD-MANUAL-1'");
+  });
+
   it("confirms a transfer: balance up, bill paid, ledger row by the admin, notification and audit", async () => {
     const t = await svc.konfirmasiSetoranManual(pid, { tanggal_bayar: kemarin, nominal: tagihan.nominal, tagihan_id: tagihan.id }, admin);
     expect(t.jenis).toBe("DP");

@@ -66,7 +66,7 @@ export async function detail(id: number) {
   const p = rows[0];
   if (!p) throw new ApiError(404, "TIDAK_DITEMUKAN", "Pendaftaran tidak ditemukan.");
   const [tagihan, transaksi, notifikasi, audit, cfg, hariIni, jadwal, bill] = await Promise.all([
-    pool.query("SELECT * FROM v_tagihan_status WHERE pendaftaran_id = $1 ORDER BY periode, id", [id]),
+    pool.query("SELECT v.*, EXISTS (SELECT 1 FROM pembayaran_gateway pg WHERE pg.tagihan_id = v.id AND pg.status = 'menunggu') AS menunggu_gateway FROM v_tagihan_status v WHERE v.pendaftaran_id = $1 ORDER BY v.periode, v.id", [id]),
     pool.query("SELECT t.*, a.nama AS admin_nama FROM transaksi t LEFT JOIN pengguna_admin a ON a.id = t.dikonfirmasi_oleh WHERE pendaftaran_id = $1 ORDER BY t.id DESC", [id]),
     pool.query("SELECT * FROM notifikasi WHERE pendaftaran_id = $1 ORDER BY id DESC", [id]),
     pool.query(
