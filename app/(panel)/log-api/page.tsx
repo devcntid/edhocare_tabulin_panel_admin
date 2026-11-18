@@ -1,5 +1,5 @@
 import { HalamanDaftar } from "@/components/halaman-daftar";
-import { one, pageNum } from "@/components/table";
+import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { FILTER, daftarLogApi } from "@/lib/services/laporan";
 
@@ -9,7 +9,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const hasil = one(sp.hasil) ?? "";
-  const data = await daftarLogApi({ q, hasil, page: pageNum(sp.page) });
+  const data = await daftarLogApi({ q, hasil, page: pageNum(sp.page), per: perNum(sp.per) });
   return (
     <HalamanDaftar ekspor="log-api"
       judul="Log setoran API"

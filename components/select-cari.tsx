@@ -57,7 +57,7 @@ export function SelectCari({ opsi, value, onChange, placeholder = "Pilih…", ko
       )}
       <span aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#888]">▾</span>
       {buka && (
-        <ul id={`${id}-daftar`} role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#ddd] bg-white py-1 shadow-lg">
+        <ul id={`${id}-daftar`} role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#cfdde8] bg-white py-1 shadow-lg">
           {hasil.length === 0 && <li className="px-3 py-2 text-[13px] text-[#888]">{kosong}</li>}
           {hasil.map((o, i) => (
             <li

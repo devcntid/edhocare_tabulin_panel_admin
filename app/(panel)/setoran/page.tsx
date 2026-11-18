@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HalamanDaftar } from "@/components/halaman-daftar";
-import { one, pageNum } from "@/components/table";
+import { TombolDetail } from "@/components/page";
+import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { FILTER, daftarTransaksi } from "@/lib/services/laporan";
 
@@ -8,11 +9,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const jenis = one(sp.jenis) ?? "";
-  const data = await daftarTransaksi({ q, jenis, page: pageNum(sp.page) });
+  const data = await daftarTransaksi({ q, jenis, page: pageNum(sp.page), per: perNum(sp.per) });
   return (
     <HalamanDaftar ekspor="setoran"
       judul="Setoran (buku besar)"
-      desc="Setoran diterima dari API (bank/aplikasi) secara otomatis; admin hanya dapat mengoreksi dari halaman detail pendaftaran. Baris buku besar tidak pernah diubah; koreksi dicatat sebagai baris negatif."
+      desc="Setoran dari bank atau gateway masuk otomatis; transfer manual dikonfirmasi dan dikoreksi oleh keuangan dari halaman detail pendaftaran. Baris buku besar tidak pernah diubah; koreksi dicatat sebagai baris negatif."
       basis="/setoran" cari="Cari no. transaksi, peserta" params={{ q, jenis }} data={data} kunci={(t) => t.id}
       filter={[{ name: "jenis", semua: "Semua jenis", opsi: FILTER.jenisTransaksi.map((j) => [j, j] as const) }]}
       kolom={[
@@ -23,6 +24,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         { judul: "Nominal", tipe: "uang", sel: (t) => t.nominal_transaksi },
         { judul: "Saldo setelah", tipe: "uang", sel: (t) => t.saldo_setelah },
         { judul: "Dikonfirmasi", sel: (t) => fmtTgl(t.tanggal_konfirmasi) },
+        { judul: "Aksi", tipe: "aksi", sel: (t) => <TombolDetail href={`/pendaftaran/${t.pendaftaran_id}`} /> },
       ]}
     />
   );

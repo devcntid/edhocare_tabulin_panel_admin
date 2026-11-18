@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
+import { KonfirmasiSetoran, type TagihanTerbuka } from "@/components/konfirmasi-setoran";
 import { btnDanger, btnPrimary, btnSecondary, card, input } from "@/components/ui";
 import { useApi } from "@/components/use-api";
 import { fmtRp } from "@/lib/format";
@@ -11,10 +12,13 @@ type Props = {
   bisaVerifikasi: boolean;
   bisaKeuangan: boolean;
   tagihanBaru: { periode: string; nominal: number } | null;
+  /** Unpaid bills the deposit can settle, and the latest allowed transfer date (yesterday, H+1). */
+  tagihanBelumLunas: TagihanTerbuka[];
+  tanggalMaks: string;
 };
 
 
-export function Actions({ id, status, bisaVerifikasi, bisaKeuangan, tagihanBaru }: Props) {
+export function Actions({ id, status, bisaVerifikasi, bisaKeuangan, tagihanBaru, tagihanBelumLunas, tanggalMaks }: Props) {
   const api = useApi();
   const [alasan, setAlasan] = useState("");
   const [tolak, setTolak] = useState(false);
@@ -55,9 +59,10 @@ export function Actions({ id, status, bisaVerifikasi, bisaKeuangan, tagihanBaru 
 
       {status === "aktif" && (
         <div className="space-y-5">
-          <p className="text-[13px] text-[#666]">Setoran diterima otomatis dari API (bank/aplikasi) dan muncul di buku besar. Admin hanya dapat mengoreksi.</p>
+          <p className="text-[13px] text-[#666]">Setoran dari bank atau gateway masuk otomatis ke buku besar. Untuk transfer bank manual yang sudah dicek di mutasi, konfirmasi dengan tombol di bawah. Kesalahan dikoreksi lewat baris koreksi.</p>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-[#eee] pt-4">
+            <KonfirmasiSetoran id={id} tagihan={tagihanBelumLunas} tanggalMaks={tanggalMaks} />
             {tagihanBaru && (
               <button className={btnSecondary} disabled={api.busy} onClick={() => api.call(`${base}/tagihan`, { periode: tagihanBaru.periode })}>
                 Terbitkan tagihan {tagihanBaru.periode} ({fmtRp(tagihanBaru.nominal)})

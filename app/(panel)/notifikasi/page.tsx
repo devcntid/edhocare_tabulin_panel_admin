@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { label } from "@/components/badge";
 import { HalamanDaftar } from "@/components/halaman-daftar";
-import { one, pageNum } from "@/components/table";
+import { TombolDetail } from "@/components/page";
+import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { FILTER, daftarNotifikasi } from "@/lib/services/laporan";
 
@@ -9,7 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const kategori = one(sp.kategori) ?? "";
-  const data = await daftarNotifikasi({ q, kategori, page: pageNum(sp.page) });
+  const data = await daftarNotifikasi({ q, kategori, page: pageNum(sp.page), per: perNum(sp.per) });
   return (
     <HalamanDaftar ekspor="notifikasi"
       judul="Notifikasi ke peserta"
@@ -24,6 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         { judul: "Kanal", sel: (n) => n.kanal },
         { judul: "Status kirim", sel: (n) => <>{n.status_kirim}{n.galat && <div className="text-xs text-red-600">{n.galat}</div>}</> },
         { judul: "Pesan", sel: (n) => <><div className="font-semibold">{n.judul}</div><div className="text-[#555]">{n.isi}</div></> },
+        { judul: "Aksi", tipe: "aksi", sel: (n) => <TombolDetail href={`/pendaftaran/${n.pendaftaran_id}`} /> },
       ]}
     />
   );

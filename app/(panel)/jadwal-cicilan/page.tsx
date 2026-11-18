@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Badge, label } from "@/components/badge";
 import { HalamanDaftar } from "@/components/halaman-daftar";
-import { one, pageNum } from "@/components/table";
+import { TombolDetail } from "@/components/page";
+import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { FILTER, daftarJadwal } from "@/lib/services/laporan";
 
@@ -9,7 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const status = one(sp.status) ?? "";
-  const data = await daftarJadwal({ q, status, page: pageNum(sp.page) });
+  const data = await daftarJadwal({ q, status, page: pageNum(sp.page), per: perNum(sp.per) });
   return (
     <HalamanDaftar ekspor="jadwal-cicilan"
       judul="Jadwal cicilan"
@@ -24,6 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         { judul: "Nominal", tipe: "uang", sel: (j) => j.nominal },
         { judul: "Status", sel: (j) => <Badge value={j.status_tampil} /> },
         { judul: "No. tagihan", sel: (j) => j.nomor_tagihan ?? "-" },
+        { judul: "Aksi", tipe: "aksi", sel: (j) => <TombolDetail href={`/pendaftaran/${j.pendaftaran_id}`} /> },
       ]}
     />
   );

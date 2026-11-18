@@ -1,5 +1,5 @@
 import { HalamanDaftar } from "@/components/halaman-daftar";
-import { one, pageNum } from "@/components/table";
+import { one, pageNum, perNum } from "@/components/table";
 import { fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
@@ -9,7 +9,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const user = await getCurrentUser();
-  const data = await daftarAudit({ q, page: pageNum(sp.page) });
+  const data = await daftarAudit({ q, page: pageNum(sp.page), per: perNum(sp.per) });
   return (
     <HalamanDaftar ekspor={user && can(user.peran, "kelola_pengguna") ? "audit" : undefined}
       judul="Audit log" desc="Catatan semua aksi admin. Baris audit tidak pernah diubah atau dihapus."

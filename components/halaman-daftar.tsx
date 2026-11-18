@@ -9,7 +9,9 @@ import { btnSecondary } from "@/components/ui";
 
 export type Kolom<T> =
   | { judul: string; tipe?: "teks"; sel: (r: T) => ReactNode }
-  | { judul: string; tipe: "uang" | "angka"; sel: (r: T) => number | null | undefined };
+  | { judul: string; tipe: "uang" | "angka"; sel: (r: T) => number | null | undefined }
+  /** Row buttons (Detail, shortcuts): right-aligned in a fixed-width cell that wraps onto a second line, so the table never grows wider than the screen. */
+  | { judul: string; tipe: "aksi"; sel: (r: T) => ReactNode };
 
 export type FilterPilih = { name: string; semua: string; opsi: readonly (readonly [string, string])[] };
 
@@ -26,7 +28,7 @@ export function HalamanDaftar<T>({ judul, desc, aksi, ekspor, cari, filter = [],
   params: Record<string, string>;
   /** Page path, e.g. "/tagihan". */
   basis: string;
-  data: { rows: T[]; total: number; page: number; pages: number };
+  data: { rows: T[]; total: number; page: number; per: number; pages: number };
   kolom: Kolom<T>[];
   kunci: (r: T) => string | number;
 }) {
@@ -41,17 +43,18 @@ export function HalamanDaftar<T>({ judul, desc, aksi, ekspor, cari, filter = [],
         </FilterBar>
       )}
       <div>
-        <Table head={kolom.map((k) => k.judul)} empty={!data.rows.length} filtered={!!query} resetHref={basis}>
+        <Table head={kolom.map((k) => k.judul)} empty={!data.rows.length} filtered={!!query} resetHref={basis}
+          bawah={<Pager basis={basis} params={params} page={data.page} pages={data.pages} total={data.total} per={data.per} />}>
           {data.rows.map((r) => (
             <tr key={kunci(r)}>
               {kolom.map((k) =>
                 k.tipe === "uang" ? <Uang key={k.judul} v={k.sel(r)} />
                 : k.tipe === "angka" ? <Angka key={k.judul} v={k.sel(r)} />
+                : k.tipe === "aksi" ? <td key={k.judul} className="w-px"><div className="flex w-56 flex-wrap items-center justify-end gap-2">{k.sel(r)}</div></td>
                 : <td key={k.judul}>{k.sel(r)}</td>)}
             </tr>
           ))}
         </Table>
-        <Pager base={query ? `${basis}?${query}` : basis} page={data.page} pages={data.pages} total={data.total} />
       </div>
     </Halaman>
   );

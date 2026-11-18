@@ -3,23 +3,32 @@ import { ApiError } from "@/lib/api";
 import { Badge, label } from "@/components/badge";
 import { Halaman, PageHeader, Section } from "@/components/page";
 import { Info, InfoGrid, Stat, StatGrid } from "@/components/stat";
-import { Table, Uang } from "@/components/table";
+import { Pager, Table, Uang, one, pageNum, perNum } from "@/components/table";
 import { card } from "@/components/ui";
 import { fmtRp, fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/session";
 import { klaimPendaftaran } from "@/lib/services/klaim";
 import { detail } from "@/lib/services/pendaftaran";
+import { potong } from "@/lib/services/daftar";
+import { addDays } from "@/lib/services/tabungan";
 import { Actions, KoreksiButton, TolakKlaimButton } from "./actions";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const id = Number((await params).id);
+  const sp = await searchParams;
+  const qs = Object.fromEntries(Object.entries(sp).flatMap(([k, v]) => (one(v) ? [[k, one(v) as string]] : [])));
+  const hal = <T,>(baris: T[], awalan: string) => potong(baris, pageNum(sp[`${awalan}_page`]), perNum(sp[`${awalan}_per`]));
   if (!Number.isSafeInteger(id) || id <= 0) notFound();
   const d = await detail(id).catch((e) => { if (e instanceof ApiError && e.status === 404) notFound(); throw e; });
   const [user, klaim] = await Promise.all([getCurrentUser(), klaimPendaftaran(id)]);
   const p = d.pendaftaran;
   const bisaKeuangan = !!user && can(user.peran, "keuangan");
   const bisaVerifikasi = !!user && can(user.peran, "verifikasi");
+  const [jd, tg, kl, bb, nf, rw] = [hal(d.jadwal, "jd"), hal(d.tagihan, "tg"), hal(klaim, "kl"), hal(d.transaksi, "bb"), hal(d.notifikasi, "nf"), hal(d.audit, "rw")];
+  const pager = (h: { page: number; pages: number; total: number; per: number }, awalan: string, jangkar: string) => (
+    <Pager basis={`/pendaftaran/${p.id}`} params={qs} page={h.page} pages={h.pages} total={h.total} per={h.per} awalan={awalan} jangkar={jangkar} />
+  );
 
   return (
     <Halaman>
@@ -51,6 +60,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         id={p.id} status={p.status_pendaftaran}
         bisaVerifikasi={bisaVerifikasi} bisaKeuangan={bisaKeuangan}
         tagihanBaru={d.tagihan_baru}
+        tagihanBelumLunas={d.tagihan.filter((t) => t.status !== "lunas").map((t) => ({ id: t.id, nomor: t.nomor, nominal: Number(t.nominal) }))}
+        tanggalMaks={addDays(d.hari_ini, -1)}
       />
 
       <StatGrid>
@@ -80,30 +91,32 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       )}
 
       {d.jadwal.length > 0 && (
-        <Section title={`Jadwal cicilan (${d.jadwal.length} kali)`}>
+        <Section id="jadwal" title={`Jadwal cicilan (${d.jadwal.length} kali)`}>
           <Table head={["Cicilan ke", "Periode", "Jatuh tempo", "Nominal", "Status", "No. tagihan"]}>
-            {d.jadwal.map((j) => (
+            {jd.rows.map((j) => (
               <tr key={j.urutan}><td className="text-right tabular-nums">{j.urutan}</td><td>{j.periode}</td><td>{fmtTgl(j.jatuh_tempo)}</td><Uang v={j.nominal} />
                 <td><Badge value={j.status_tampil} /></td><td>{j.nomor_tagihan ?? "-"}</td></tr>
             ))}
           </Table>
+          {pager(jd, "jd", "jadwal")}
         </Section>
       )}
 
 
-      <Section title="Tagihan">
+      <Section id="tagihan" title="Tagihan">
         <Table head={["No.", "Jenis", "Periode", "Nominal", "Terbit", "Jatuh tempo", "Status", "Ref. transaksi"]} empty={!d.tagihan.length}>
-          {d.tagihan.map((t) => (
+          {tg.rows.map((t) => (
             <tr key={t.id}><td>{t.nomor}</td><td>{t.jenis === "dp" ? "DP" : "Bulanan"}</td><td>{t.periode}</td><Uang v={t.nominal} />
               <td>{fmtTgl(t.terbit_pada)}</td><td>{fmtTgl(t.jatuh_tempo)}</td><td><Badge value={t.status_tampil} /></td><td>{t.ref_transaksi ?? "-"}</td></tr>
           ))}
         </Table>
+        {pager(tg, "tg", "tagihan")}
       </Section>
 
       {klaim.length > 0 && (
-        <Section title="Laporan transfer pasien (klaim)">
+        <Section id="klaim" title="Laporan transfer pasien (klaim)">
           <Table head={["No.", "Tagihan", "Nominal", "Tgl transfer", "Bank / pengirim", "Dikirim", "Status", "Bukti", ""]}>
-            {klaim.map((k) => (
+            {kl.rows.map((k) => (
               <tr key={k.id}>
                 <td>{k.nomor}</td><td>{k.nomor_tagihan}</td><Uang v={Number(k.nominal_transfer)} /><td>{fmtTgl(k.tanggal_transfer)}</td>
                 <td>{k.bank_asal}<div className="text-xs text-[#888]">{k.nama_pengirim}</div></td><td>{fmtTgl(k.dikirim_pada)}</td>
@@ -113,12 +126,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </tr>
             ))}
           </Table>
+          {pager(kl, "kl", "klaim")}
         </Section>
       )}
 
-      <Section title="Buku besar setoran">
+      <Section id="buku-besar" title="Buku besar setoran">
         <Table head={["No.", "Jenis", "Tgl bayar", "Nominal", "Saldo setelah", "Dikonfirmasi", "Ket.", ""]} empty={!d.transaksi.length}>
-          {d.transaksi.map((t) => {
+          {bb.rows.map((t) => {
             const sudahDikoreksi = d.transaksi.some((x) => x.koreksi_dari === t.id);
             return (
               <tr key={t.id}>
@@ -131,18 +145,21 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             );
           })}
         </Table>
+        {pager(bb, "bb", "buku-besar")}
       </Section>
 
-      <Section title="Notifikasi terkirim">
+      <Section id="notifikasi" title="Notifikasi terkirim">
         <Table head={["Waktu", "Kategori", "Templat", "Status kirim", "Pesan"]} empty={!d.notifikasi.length}>
-          {d.notifikasi.map((n) => <tr key={n.id}><td className="whitespace-nowrap">{fmtTgl(n.dibuat_pada)}</td><td>{label(n.kategori)}</td><td className="text-xs text-[#666]">{n.templat_kode ?? "-"}</td><td>{n.status_kirim}</td><td><div className="font-semibold">{n.judul}</div><div className="text-[#555]">{n.isi}</div></td></tr>)}
+          {nf.rows.map((n) => <tr key={n.id}><td className="whitespace-nowrap">{fmtTgl(n.dibuat_pada)}</td><td>{label(n.kategori)}</td><td className="text-xs text-[#666]">{n.templat_kode ?? "-"}</td><td>{n.status_kirim}</td><td><div className="font-semibold">{n.judul}</div><div className="text-[#555]">{n.isi}</div></td></tr>)}
         </Table>
+        {pager(nf, "nf", "notifikasi")}
       </Section>
 
-      <Section title="Riwayat aksi">
+      <Section id="riwayat" title="Riwayat aksi">
         <Table head={["Waktu", "Admin", "Aksi", "Detail"]} empty={!d.audit.length}>
-          {d.audit.map((l) => <tr key={l.id}><td className="whitespace-nowrap">{fmtTgl(l.dibuat_pada)}</td><td>{l.admin_nama ?? "-"}</td><td>{l.aksi}</td><td className="max-w-md truncate font-mono text-xs">{l.sesudah ? JSON.stringify(l.sesudah) : ""}</td></tr>)}
+          {rw.rows.map((l) => <tr key={l.id}><td className="whitespace-nowrap">{fmtTgl(l.dibuat_pada)}</td><td>{l.admin_nama ?? "-"}</td><td>{l.aksi}</td><td className="max-w-md truncate font-mono text-xs">{l.sesudah ? JSON.stringify(l.sesudah) : ""}</td></tr>)}
         </Table>
+        {pager(rw, "rw", "riwayat")}
       </Section>
     </Halaman>
   );

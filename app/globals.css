@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f5f7;
+  --background: #f1f6fa;
   --foreground: #1a1a1a;
   /* Edelweiss brand (docs/12): blue dominant, pink secondary, purple accent. The exact brand blue and pink are only 2.8:1 and 4.1:1 on white,
      so fills and links that carry white text or sit on white use a darkened blue of the same hue (--primary 5.1:1). Exact hexes stay for
@@ -31,7 +31,7 @@ body {
 }
 
 input:not([type="checkbox"]):not([type="radio"]), textarea, select {
-  border: 1px solid #ddd;
+  border: 1px solid #cfdde8;
   border-radius: 0.75rem;
   background: #fff;
 }

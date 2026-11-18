@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Badge, label } from "@/components/badge";
 import { HalamanDaftar } from "@/components/halaman-daftar";
-import { one, pageNum } from "@/components/table";
+import { TombolDetail } from "@/components/page";
+import { one, pageNum, perNum } from "@/components/table";
 import { btnPrimary, btnSecondary } from "@/components/ui";
 import { fmtTgl } from "@/lib/format";
 import { can } from "@/lib/permissions";
@@ -13,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const q = one(sp.q) ?? "";
   const status = one(sp.status) ?? "";
   const user = await getCurrentUser();
-  const data = await daftar({ q, status, page: pageNum(sp.page) });
+  const data = await daftar({ q, status, page: pageNum(sp.page), per: perNum(sp.per) });
   return (
     <HalamanDaftar ekspor="pendaftaran"
       judul="Pendaftaran"
@@ -30,6 +31,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         { judul: "Saldo", tipe: "uang", sel: (p) => p.saldo },
         { judul: "Status", sel: (p) => <Badge value={p.status_pendaftaran} /> },
         { judul: "Terkirim", sel: (p) => fmtTgl(p.dibuat_pada) },
+        { judul: "Aksi", tipe: "aksi", sel: (p) => <TombolDetail href={`/pendaftaran/${p.id}`} /> },
       ]}
     />
   );
