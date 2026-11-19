@@ -100,7 +100,15 @@ export function StatusAktif({ aktif, kata = ["Aktif", "Nonaktif"] }: { aktif: bo
 /** Row-button class for plain actions next to <FormDialog gaya="baris">. Lives in components/ui.ts so server components can use it. */
 export { btnBaris };
 
-/** Action cell: buttons side by side, right-aligned, never wrapped. */
-export function AksiBaris({ children }: { children: React.ReactNode }) {
-  return <td className="w-px whitespace-nowrap"><div className="flex items-center justify-end gap-2">{children}</div></td>;
+/** Action cell: buttons side by side, never wrapped, starting at the left edge of the "Aksi" header. `galat` shows under the buttons, so it never pushes them out of line. */
+export function AksiBaris({ children, galat }: { children: React.ReactNode; galat?: string | null }) {
+  return (
+    <td className="w-px whitespace-nowrap">
+      <div className="flex items-center justify-start gap-2">{children}</div>
+      {galat && <p role="alert" className="mt-1 text-xs text-red-600">{galat}</p>}
+    </td>
+  );
 }
+
+/** Class for a show/hide row button: fixed width so "Sembunyikan" and "Tampilkan" take the same space and the buttons after it line up in every row. */
+export const btnBarisTukar = `${btnBaris} w-[6.5rem] justify-center`;

@@ -71,6 +71,9 @@ Izin admin (`lib/permissions.ts`):
 |---|---|---|---|
 | POST | `/api/pembayaran/kanal` | Tambah metode pembayaran (`kode`, `nama`, `deskripsi`, `jenis`: `va`, `transfer_manual`, atau `tunai`; bawaan `va`). Metode baru nonaktif. | keuangan |
 | PATCH | `/api/pembayaran/kanal/{id}` | Ubah nama, deskripsi, `jenis`, atau `aktif`. | keuangan |
+| POST | `/api/pembayaran/kanal/urutan` | Simpan urutan hasil seret: `ids` = semua id metode, dari atas ke bawah. Urutan dipakai panel, aplikasi peserta, dan `GET /api/integrasi/instruksi`. | keuangan |
+| POST | `/api/pembayaran/instruksi/urutan` | Simpan urutan instruksi satu metode: `kanal_id` dan `ids` = semua id instruksi metode itu, dari atas ke bawah. | keuangan |
+| GET / PUT / DELETE | `/api/pembayaran/kanal/{id}/logo` | Gambar metode (PNG, JPG, WebP, maks 512 KB; PUT multipart field `file`). Hanya untuk panel admin, belum dikirim ke aplikasi peserta. | lihat / keuangan |
 | POST | `/api/pembayaran/instruksi` | Tambah instruksi pembayaran (bank, rekening, langkah). | keuangan |
 | PATCH | `/api/pembayaran/instruksi/{id}` | Ubah instruksi. | keuangan |
 | PATCH | `/api/templat/{kode}` | Ubah templat notifikasi (nama, kategori, judul, isi, `aktif`). | verifikasi |
@@ -106,6 +109,7 @@ Izin admin (`lib/permissions.ts`):
 | POST | `/api/integrasi/token` | Terbitkan token pasien untuk `no_rm` yang dikenal (pengganti login Portal Pasien sampai RS menyediakannya). |
 | POST | `/api/integrasi/setoran` | Terima setoran dari bank atau aplikasi (`no_va`, `referensi`, `tanggal_bayar`, `nominal`, `nomor_tagihan` opsional). Idempotent pada `referensi`. Tiap panggilan dicatat di log setoran API. Jalan masuk setoran dari bank atau aplikasi. |
 | POST | `/api/integrasi/midtrans` | Notifikasi pembayaran Midtrans Sandbox. Diautentikasi dengan `signature_key` (SHA512), bukan Bearer. Settlement menambah saldo lewat fungsi setoran yang sama (idempotent pada `order_id`), tercatat di log setoran API. |
+| POST | `/api/integrasi/faspay` | Webhook dari payment gateway Faspay (pay-gate). Diautentikasi dengan tanda tangan HMAC-SHA256 (`X-Gateway-Timestamp`, `X-Gateway-Signature`) bila `FASPAY_WEBHOOK_SECRET` diisi; isinya hanya petunjuk, status dan nominal dibaca ulang dari gateway sebelum saldo bertambah (idempotent pada `merchant_reference`). Pengiriman minimal sekali, jadi kiriman ulang aman. | - |
 | GET | `/api/integrasi/instruksi` | Instruksi pembayaran yang aktif untuk ditampilkan di aplikasi. |
 
 ---
@@ -123,7 +127,7 @@ Kode E-xx mengikuti kontrak. Daftar memakai paginasi cursor (`limit` 1–50, `cu
 | E-05 | GET | `/api/v1/enrollments/me` | Status pendaftaran, rencana, dan profil milik pasien. |
 | E-06 | GET | `/api/v1/bills` | Daftar tagihan. Query: `kelompok=aktif\|riwayat\|semua`. |
 | E-07 | GET | `/api/v1/bills/{id}` | Detail satu tagihan, termasuk klaim terkait. |
-| - | POST | `/api/v1/bills/{id}/checkout` | Buat VA pembayaran Midtrans Sandbox untuk tagihan (`bank` opsional, bawaan `bca`). Tagihan harus milik pasien, belum lunas, pendaftaran aktif. Bila `MIDTRANS_VA_PREFIX` diisi dan VA pasien berawalan itu (awalan + 11 digit), Midtrans memakai nomor VA pasien itu untuk setiap tagihan; selama pembayaran sebelumnya masih menunggu, checkout ditolak (409 `PEMBAYARAN_MENUNGGU`). Pembayaran yang sudah kedaluwarsa atau gagal di Midtrans tidak menghalangi. |
+| - | POST | `/api/v1/bills/{id}/checkout` | Buat VA pembayaran Midtrans Sandbox untuk tagihan (`bank` opsional, bawaan `bca`). Tagihan harus milik pasien, belum lunas, pendaftaran aktif. Bila `MIDTRANS_VA_PREFIX` diisi dan VA pasien berawalan itu (awalan + 11 digit), Midtrans memakai nomor VA pasien itu untuk setiap tagihan; selama pembayaran sebelumnya masih menunggu, checkout ditolak (409 `PEMBAYARAN_MENUNGGU`). Pembayaran yang sudah kedaluwarsa atau gagal di Midtrans tidak menghalangi. | Body `{ "kanal": "<kode metode>" }` memakai Faspay lewat gateway: metode harus aktif dan punya `metode_gateway`; respons berisi `instruksi_pembayaran` apa adanya dari gateway (`type`, `virtual_account_no`, `payment_code`, `qr_url`, `redirect_url`, `expires_at`; yang tidak berlaku untuk kanal itu bernilai `null`). `nomor_va` terisi dari `virtual_account_no` untuk kanal VA dan kosong untuk e-wallet, QRIS, dan retail (e-wallet memakai `redirect_url`). Kanal yang belum punya route di gateway dijawab `409 KANAL_TIDAK_TERSEDIA`. Pembayaran Faspay yang masih terbuka untuk tagihan dan metode yang sama dikembalikan lagi, bukan dibuat ulang.
 | E-08 | GET | `/api/v1/ledger` | Riwayat transaksi (buku besar). Query: `jenis_transaksi`, `bulan` (YYYY-MM). |
 | E-09 | GET | `/api/v1/receipt` | Data kuitansi satu transaksi (`id_transaksi`) beserta tautan PDF bertanda tangan (berlaku 15 menit). |
 | (E-09) | GET | `/api/v1/receipt/{id}/pdf?token=` | Unduh PDF kuitansi. Diizinkan oleh token di URL, tanpa Bearer. |

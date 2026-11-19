@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "@/components/toast";
 
 export type ApiResult = { ok: boolean; message?: string; fields?: Record<string, string> };
@@ -11,6 +11,8 @@ export function useApi() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
+  /** `data` of the last successful response (e.g. the id of a record just created). */
+  const hasil = useRef<unknown>(null);
 
   async function call(url: string, body?: unknown, method = "POST"): Promise<boolean> {
     setBusy(true);
@@ -24,6 +26,7 @@ export function useApi() {
         setFields(json?.error?.fields ?? {});
         return false;
       }
+      hasil.current = json?.data ?? null;
       router.refresh();
       toast("Perubahan berhasil disimpan.");
       return true;
@@ -34,5 +37,5 @@ export function useApi() {
       setBusy(false);
     }
   }
-  return { call, busy, error, fields, setError };
+  return { call, busy, error, fields, setError, hasil };
 }

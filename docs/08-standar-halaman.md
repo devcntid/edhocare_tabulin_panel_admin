@@ -54,6 +54,14 @@ Satu komponen untuk semua: `Pager` (`components/table.tsx`). Isinya: rentang dat
 - Hal yang terikat fungsi/trigger DB (variabel templat, aturan Pengaturan) hanya boleh diubah nilainya, tidak ditambah atau dihapus.
 - Setiap perubahan tulis ke `audit_log`.
 
+## 3a. Daftar bersarang dan seret urutan (Metode pembayaran)
+
+Contoh: `app/(panel)/pembayaran/kanal-panel.tsx`. Data induk dan anak ada di tabel DB terpisah, tetapi tampil di satu halaman: tiap induk (metode) satu baris `Table`, anaknya (instruksi) satu `Table` bersarang di bawahnya.
+- **Urutan lewat seret**: hook `useUrutan` (satu untuk induk, satu per induk untuk anak). Hanya gagang (ikon grip) yang memulai seret, supaya teks di dialog tetap bisa dipilih; panah atas/bawah pada gagang untuk keyboard. Urutan disimpan saat seret selesai (`POST .../urutan`); kolom `urutan` dipakai juga oleh aplikasi dan API instruksi. Saat daftar terfilter atau terpaginasi, API hanya menukar posisi baris yang tampil di antara slot mereka sendiri.
+- **Buka/tutup anak**: bawaan tertutup; yang terakhir dibuka diingat di `localStorage` browser (dibaca setelah mount agar cocok dengan render server).
+- **Gambar**: berkas disimpan di tabel terpisah (`kanal_logo`, bytea) supaya snapshot audit tidak membawa isi berkas; hanya PNG/JPG/WebP (cek tanda berkas), maks 512 KB, tanpa SVG.
+- `AksiBaris` rata kiri di bawah judul "Aksi"; tombol Sembunyikan/Tampilkan memakai `btnBarisTukar` (lebar tetap) supaya tombol sesudahnya sejajar di semua baris.
+
 ## 3b. Daftar data transaksi (pendaftaran, pasien, tagihan, setoran, jadwal cicilan, notifikasi)
 
 Data ini punya halaman detail dengan aksi yang bergantung status, jadi daftarnya tidak diedit di tempat.

@@ -1,4 +1,4 @@
-import { Baby, BedDouble, Bell, Building2, CalendarClock, ClipboardList, CreditCard, FileText, History, LayoutDashboard, ListChecks, Plug, ReceiptText, Settings, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
+import { Baby, BedDouble, Bell, Building2, CalendarClock, ClipboardList, CreditCard, FileText, History, LayoutDashboard, Plug, ReceiptText, Settings, UserRound, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export type ItemMenu = { href: string; label: string; icon: LucideIcon; aksi?: "kelola_pengguna" };
 export const MENU: { title: string; items: ItemMenu[] }[] = [
@@ -20,7 +20,6 @@ export const MENU: { title: string; items: ItemMenu[] }[] = [
       { href: "/setoran", label: "Setoran", icon: Wallet },
       { href: "/log-api", label: "Log setoran API", icon: Plug },
       { href: "/pembayaran", label: "Metode pembayaran", icon: CreditCard },
-      { href: "/instruksi-pembayaran", label: "Instruksi pembayaran", icon: ListChecks },
     ],
   },
   {

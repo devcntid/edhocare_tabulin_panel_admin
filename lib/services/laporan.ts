@@ -179,16 +179,16 @@ export async function daftarTemplat() {
 
 export async function daftarKanal() {
   const [kanal, instruksi] = await Promise.all([
-    pool.query("SELECT id, kode, nama, deskripsi, aktif, jenis FROM kanal_pembayaran ORDER BY id"),
+    pool.query("SELECT k.id, k.kode, k.nama, k.deskripsi, k.aktif, k.jenis, l.diubah_pada IS NOT NULL AS ada_logo, extract(epoch FROM l.diubah_pada)::bigint AS versi_logo FROM kanal_pembayaran k LEFT JOIN kanal_logo l ON l.kanal_id = k.id ORDER BY k.urutan, k.id"),
     pool.query("SELECT id, kanal_id, judul, isi, nama_bank, nama_rekening, nomor_rekening, aktif FROM instruksi_pembayaran ORDER BY kanal_id, urutan, id"),
   ]);
-  return { kanal: kanal.rows as { id: number; kode: string; nama: string; deskripsi: string | null; aktif: boolean; jenis: JenisKanal }[], instruksi: instruksi.rows as
+  return { kanal: kanal.rows as { id: number; kode: string; nama: string; deskripsi: string | null; aktif: boolean; jenis: JenisKanal; ada_logo: boolean; versi_logo: number | null }[], instruksi: instruksi.rows as
     { id: number; kanal_id: number; judul: string; isi: string; nama_bank: string | null; nama_rekening: string | null; nomor_rekening: string | null; aktif: boolean }[] };
 }
 
 /** Active methods finance can pick when confirming a deposit by hand (not the VA ones: those arrive on their own). */
 export async function kanalManual() {
-  return (await pool.query("SELECT id, nama FROM kanal_pembayaran WHERE aktif AND jenis IN ('transfer_manual','tunai') ORDER BY id")).rows as { id: number; nama: string }[];
+  return (await pool.query("SELECT id, nama FROM kanal_pembayaran WHERE aktif AND jenis IN ('transfer_manual','tunai') ORDER BY urutan, id")).rows as { id: number; nama: string }[];
 }
 
 export async function daftarLogApi(opts: { q?: string; hasil?: string; page?: number; per?: number; semua?: boolean }) {
