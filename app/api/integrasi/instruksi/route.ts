@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     const { rows } = await pool.query(
       `SELECT k.kode, k.nama, k.deskripsi, i.judul, i.isi, i.nama_bank, i.nama_rekening, i.nomor_rekening
        FROM kanal_pembayaran k JOIN instruksi_pembayaran i ON i.kanal_id = k.id
-       WHERE k.aktif AND i.aktif ORDER BY k.id, i.urutan, i.id`);
+       WHERE k.aktif AND i.aktif ORDER BY k.urutan, k.id, i.urutan, i.id`);
     return NextResponse.json({ data: rows });
   } catch (e) {
     return errorResponse(e);

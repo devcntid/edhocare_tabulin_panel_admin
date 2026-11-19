@@ -25,7 +25,7 @@ export async function program() {
     konfig(),
     pool.query(
       `SELECT k.kode, k.nama, coalesce(array_agg(i.isi ORDER BY i.urutan, i.id) FILTER (WHERE i.id IS NOT NULL), '{}') AS langkah
-       FROM kanal_pembayaran k LEFT JOIN instruksi_pembayaran i ON i.kanal_id = k.id AND i.aktif WHERE k.aktif GROUP BY k.id ORDER BY k.id`),
+       FROM kanal_pembayaran k LEFT JOIN instruksi_pembayaran i ON i.kanal_id = k.id AND i.aktif WHERE k.aktif GROUP BY k.id ORDER BY k.urutan, k.id`),
     pool.query("SELECT min(setoran_min_bulanan) AS m FROM opsi_kelas_kamar WHERE aktif"),
   ]);
   return {

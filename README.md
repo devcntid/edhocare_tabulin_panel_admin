@@ -1,6 +1,6 @@
 # Tabulin Admin
 
-Panel admin untuk **Tabulin / Pregnancy Savings+ (RS Edelweiss)**: verifikasi pendaftaran, pasang Virtual Account, tagihan DP/bulanan, konfirmasi setoran (buku besar append-only), notifikasi, audit log. Hanya untuk pengembangan lokal (tanpa deploy, tanpa data pasien nyata, tanpa payment gateway/WhatsApp nyata).
+Panel admin untuk **Tabulin / Pregnancy Savings+ (RS Edelweiss)**: verifikasi pendaftaran, pasang Virtual Account, tagihan DP/bulanan, konfirmasi setoran (buku besar append-only), notifikasi, audit log. Hanya untuk pengembangan lokal (tanpa deploy, tanpa data pasien nyata, tanpa WhatsApp nyata; payment gateway hanya sandbox: Midtrans dan Faspay).
 
 Dokumen desain: `docs/06-design-v3.md` (aturan bisnis: `docs/05-mockup-business-logic.md`).
 
@@ -30,6 +30,12 @@ curl -X POST localhost:3000/api/integrasi/setoran \
 ```
 201 = baru dicatat, 200 = referensi sama diulang (tidak dobel). Setoran yang kurang dari tagihan, atau tagihan sudah lunas, dicatat sebagai *Setoran tambahan*. Admin hanya dapat **mengoreksi** (baris negatif).
 
+## Payment gateway
+Dua gateway, keduanya hanya untuk sandbox. Setoran dari keduanya tetap lewat fungsi setoran yang sama (`terima_setoran_api`, idempoten pada id pesanan), jadi notifikasi yang terkirim ulang tidak menambah saldo dua kali, dan isi notifikasi tidak dipercaya: status dan nominal dibaca ulang dari gateway.
+- **Midtrans Sandbox** (VA bank): `MIDTRANS_*` di `.env.example`; notifikasi ke `POST /api/integrasi/midtrans`.
+- **Faspay lewat payment gateway orchestrator** (VA, QRIS, e-wallet, retail): isi `FASPAY_BASE_URL` (alamat gateway, bukan alamat app ini), `FASPAY_CLIENT_ID`, `FASPAY_CLIENT_SECRET`, dan `FASPAY_WEBHOOK_SECRET` (tanda tangan webhook). Pendaftaran URL webhook `https://<host>/api/integrasi/faspay` dan route kanal ada di sisi gateway (script admin `add-route`); tanpa route, checkout kanal itu dijawab `409 KANAL_TIDAK_TERSEDIA`.
+- Kanal Faspay (21 kanal, `kanal_pembayaran.konfigurasi->>'pg_code'`) tersembunyi sampai keuangan menampilkannya di halaman Metode pembayaran. Checkout dari aplikasi: `POST /api/v1/bills/{id}/checkout` dengan `{ "kanal": "<kode metode>" }`. Daftar endpoint: `docs/11-daftar-api.md`.
+
 ## Peran
 | Peran | Akses |
 |---|---|
@@ -49,11 +55,11 @@ curl -X POST localhost:3000/api/integrasi/setoran \
 npm run typecheck && npm run lint && npm run build
 psql -d <db_scratch> -v ON_ERROR_STOP=1 -q -f tests/sql/ledger_core.sql   # skenario DB (pada DB hasil migrate); juga integrasi.sql dan cicilan.sql
 psql -d <db_scratch> -v ON_ERROR_STOP=1 -q -f tests/sql/integrasi.sql      # templat notifikasi + setoran API
-npm test                        # vitest: tabungan.test.ts + db.test.ts (memakai TEST_DATABASE_URL, mengosongkan schema-nya)
+npm test                        # vitest: tests/*.test.ts (memakai TEST_DATABASE_URL, mengosongkan schema-nya); gateway diuji dengan mock, tanpa jaringan
 ```
 
 ## Halaman
-Dasbor (kartu + grafik), Pasien (baca saja), Pendaftaran (+ detail & aksi), Notifikasi (log kirim), Templat notifikasi, Tagihan (+ pengingat), Setoran (buku besar), Log setoran API, Metode pembayaran, Instruksi pembayaran, Jadwal cicilan, Cara persalinan, Kelas kamar, Pengaturan, Audit log, Pengguna.
+Dasbor (kartu + grafik), Pasien (baca saja), Pendaftaran (+ detail & aksi), Notifikasi (log kirim), Templat notifikasi, Tagihan (+ pengingat), Setoran (buku besar), Log setoran API, Metode pembayaran (instruksi pembayaran ada di dalam tiap metode), Jadwal cicilan, Cara persalinan, Kelas kamar, Pengaturan, Audit log, Pengguna.
 Cara membuat halaman baru: `docs/08-standar-halaman.md`.
 Endpoint untuk app/bank: `POST /api/integrasi/setoran`, `GET /api/integrasi/instruksi` (keduanya `Authorization: Bearer $INTEGRATION_API_KEY`).
 

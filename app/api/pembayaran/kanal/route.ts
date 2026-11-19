@@ -11,7 +11,7 @@ const schema = z.object({
 
 export const POST = handler("keuangan", async (req, user) => {
   const b = schema.parse(await jsonBody(req));
-  const { rows } = await pool.query("INSERT INTO kanal_pembayaran (kode, nama, deskripsi, aktif, jenis) VALUES ($1,$2,$3,false,$4) RETURNING id", [b.kode, b.nama, b.deskripsi ?? null, b.jenis]);
+  const { rows } = await pool.query("INSERT INTO kanal_pembayaran (kode, nama, deskripsi, aktif, jenis, urutan) VALUES ($1,$2,$3,false,$4, COALESCE((SELECT max(urutan)+1 FROM kanal_pembayaran),1)) RETURNING id", [b.kode, b.nama, b.deskripsi ?? null, b.jenis]);
   await pool.query("SELECT catat_audit($1,'buat','kanal_pembayaran',$2,NULL,$3)", [user.id, rows[0].id, JSON.stringify(b)]);
   return { id: rows[0].id };
 });
