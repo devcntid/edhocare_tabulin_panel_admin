@@ -72,19 +72,20 @@ async function checkoutFaspay(g: { id: number; nomor: string; nominal: number | 
     { id: number; kode: string; nama: string; pg_code: string | null; metode_gateway: MetodeGateway | null } | undefined;
   if (!k || !k.pg_code || !k.metode_gateway) throw new ApiError(404, "TIDAK_DITEMUKAN", "Metode pembayaran tidak tersedia.");
   const nominal = Number(g.nominal);
-  const hasil = (orderId: string, instruksi: unknown) => ({ id_pembayaran: orderId, id_tagihan: g.nomor, nominal, bank: k.nama, nomor_va: null as string | null, kanal: k.kode, metode: k.metode_gateway, instruksi_pembayaran: instruksi ?? null, status: "menunggu" });
+  const hasil = (orderId: string, instruksi: unknown, noVa: string | null) => ({ id_pembayaran: orderId, id_tagihan: g.nomor, nominal, bank: k.nama, nomor_va: noVa, kanal: k.kode, metode: k.metode_gateway, instruksi_pembayaran: instruksi ?? null, status: "menunggu" });
   const buka = (await pool.query(
-    "SELECT order_id, instruksi FROM pembayaran_gateway WHERE tagihan_id = $1 AND kanal_id = $2 AND penyedia = 'faspay' AND status = 'menunggu' AND (kedaluwarsa_pada IS NULL OR kedaluwarsa_pada > now()) ORDER BY id DESC LIMIT 1",
+    "SELECT order_id, instruksi, nomor_va FROM pembayaran_gateway WHERE tagihan_id = $1 AND kanal_id = $2 AND penyedia = 'faspay' AND status = 'menunggu' AND (kedaluwarsa_pada IS NULL OR kedaluwarsa_pada > now()) ORDER BY id DESC LIMIT 1",
     [g.id, k.id])).rows[0];
-  if (buka) return hasil(buka.order_id, buka.instruksi);
+  if (buka) return hasil(buka.order_id, buka.instruksi, buka.nomor_va);
   const orderId = `${g.nomor}-${randomBytes(4).toString("hex")}`;
   const t = await buatTransaksi({ referensi: orderId, nominal, metode: k.metode_gateway, kanal: k.pg_code, deskripsi: `Tabulin ${g.nomor}` });
   if (statusLokal(t.status) === "gagal") throw new ApiError(502, "GATEWAY_GAGAL", "Gateway pembayaran menolak permintaan.");
+  const noVa = typeof t.payment_instruction?.virtual_account_no === "string" ? t.payment_instruction.virtual_account_no : null; // only VA channels have one
   const habis = t.expires_at && !Number.isNaN(Date.parse(t.expires_at)) ? new Date(t.expires_at) : null;
   await pool.query(
-    "INSERT INTO pembayaran_gateway (order_id, penyedia, pendaftaran_id, tagihan_id, nominal, bank, id_transaksi_gateway, kanal_id, instruksi, kedaluwarsa_pada) VALUES ($1,'faspay',$2,$3,$4,$5,$6,$7,$8,$9)",
-    [orderId, g.pendaftaran_id, g.id, nominal, k.nama, t.transaction_id, k.id, t.payment_instruction ? JSON.stringify(t.payment_instruction) : null, habis]);
-  return hasil(orderId, t.payment_instruction);
+    "INSERT INTO pembayaran_gateway (order_id, penyedia, pendaftaran_id, tagihan_id, nominal, bank, id_transaksi_gateway, kanal_id, instruksi, kedaluwarsa_pada, nomor_va) VALUES ($1,'faspay',$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+    [orderId, g.pendaftaran_id, g.id, nominal, k.nama, t.transaction_id, k.id, t.payment_instruction ? JSON.stringify(t.payment_instruction) : null, habis, noVa]);
+  return hasil(orderId, t.payment_instruction, noVa);
 }
 
 const notifSchema = z.object({ order_id: z.string().min(1).max(100) });

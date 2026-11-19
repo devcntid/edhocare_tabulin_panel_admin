@@ -24,7 +24,7 @@ const saldo = async () => Number((await db.query("SELECT coalesce(sum(nominal_tr
 function ttd(isi: string, ts = String(Math.floor(Date.now() / 1000)), secret = "whsecret") {
   return { ts, sig: `v1=${createHmac("sha256", secret).update(`${ts}.${isi}`).digest("hex")}` };
 }
-const webhook = (merchant_reference: string, transaction_id = "trx-1") => JSON.stringify({ event_id: "evt-1", event_type: "transaction.succeeded", transaction: { transaction_id, merchant_reference, status: "SUCCEEDED" }, occurred_at: "2026-11-19T10:00:00+07:00" });
+const webhook = (merchant_reference: string, transaction_id = "331") => JSON.stringify({ event_id: "evt-1", event_type: "transaction.succeeded", transaction: { transaction_id, merchant_reference, status: "SUCCEEDED" }, occurred_at: "2026-11-19T10:00:00+07:00" });
 
 type Balasan = { status?: number; body: object };
 /** Routes fetch by URL: token, create, read. A fresh Response per call (a body can be read once). */
@@ -33,11 +33,11 @@ function mockGateway(o: { create?: Balasan; baca?: Balasan } = {}) {
     const u = String(input);
     const r = (b: Balasan) => new Response(JSON.stringify(b.body), { status: b.status ?? 200 });
     if (u.endsWith("/v1/oauth/token")) return r({ body: { access_token: "tok", token_type: "Bearer", expires_in: 600, scope: "transactions:write" } });
-    if (u.endsWith("/v1/transactions") && init?.method === "POST") return r(o.create ?? { status: 201, body: { transaction_id: "trx-1", status: "CREATED", payment_instruction: { type: "EWALLET", checkout_url: "https://pay.example/x" } } });
-    return r(o.baca ?? { body: { transaction_id: "trx-1", status: "SUCCEEDED", amount: nominal } });
+    if (u.endsWith("/v1/transactions") && init?.method === "POST") return r(o.create ?? { status: 201, body: { transaction_id: "331", merchant_reference: "x", status: "PENDING", amount: 15000, provider_reference: "3535", payment_instruction: { type: "EWALLET", virtual_account_no: null, payment_code: null, qr_url: null, redirect_url: "https://pay.example/x", expires_at: "2099-01-01T00:00:00+07:00" }, expires_at: "2099-01-01T00:00:00+07:00" } });
+    return r(o.baca ?? { body: { transaction_id: "331", status: "SUCCEEDED", amount: nominal } });
   });
 }
-const baca = (order: string, o: Record<string, unknown> = {}) => ({ body: { transaction_id: "trx-1", merchant_reference: order, status: "SUCCEEDED", amount: nominal, ...o } });
+const baca = (order: string, o: Record<string, unknown> = {}) => ({ body: { transaction_id: "331", merchant_reference: order, status: "SUCCEEDED", amount: nominal, ...o } });
 
 beforeAll(async () => {
   if (!["localhost", "127.0.0.1"].includes(new globalThis.URL(URL).hostname)) throw new Error("tests only run against a local database");
@@ -96,12 +96,12 @@ describe("checkout Faspay", () => {
   it("creates a gateway transaction for the bill and keeps its payment instruction", async () => {
     const f = mockGateway();
     const r = await gw.checkoutTagihan(pasien, tagihan, { kanal: "ovo" });
-    expect(r).toMatchObject({ id_tagihan: tagihan, nominal, kanal: "ovo", metode: "EWALLET", status: "menunggu", instruksi_pembayaran: { checkout_url: "https://pay.example/x" } });
+    expect(r).toMatchObject({ id_tagihan: tagihan, nominal, kanal: "ovo", metode: "EWALLET", status: "menunggu", nomor_va: null, instruksi_pembayaran: { redirect_url: "https://pay.example/x" } });
     const buat = f.mock.calls.find((c) => String(c[0]).endsWith("/v1/transactions"))!;
     expect(JSON.parse(String(buat[1]?.body))).toMatchObject({ merchant_reference: r.id_pembayaran, amount: nominal, payment_method: "EWALLET", channel_code: "812", currency: "IDR" });
     expect((buat[1]?.headers as Record<string, string>)["Idempotency-Key"]).toMatch(/^[0-9a-f-]{36}$/);
     expect((buat[1]?.headers as Record<string, string>).Authorization).toBe("Bearer tok");
-    expect((await db.query("SELECT penyedia, status, kanal_id, id_transaksi_gateway FROM pembayaran_gateway WHERE order_id = $1", [r.id_pembayaran])).rows[0]).toMatchObject({ penyedia: "faspay", status: "menunggu", kanal_id: kanalId, id_transaksi_gateway: "trx-1" });
+    expect((await db.query("SELECT penyedia, status, kanal_id, id_transaksi_gateway FROM pembayaran_gateway WHERE order_id = $1", [r.id_pembayaran])).rows[0]).toMatchObject({ penyedia: "faspay", status: "menunggu", kanal_id: kanalId, id_transaksi_gateway: "331" });
     expect(await saldo()).toBe(0);
   });
 
