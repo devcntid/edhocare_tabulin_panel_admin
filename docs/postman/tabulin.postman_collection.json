@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tabulin API",
-    "description": "57 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.",
+    "description": "58 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1325,6 +1325,37 @@
               }
             }
           ]
+        },
+        {
+          "name": "Baca pasien (no_rm)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/pasien/{{no_rm}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "pasien",
+                "{{no_rm}}"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Sementara, sama seperti 'Buat pasien uji + token': mati (404) kecuali env ALLOW_PASIEN_UJI=1. Ganti variabel no_rm sesuai pasien."
+          }
         },
         {
           "name": "Token pasien",
