@@ -13,9 +13,10 @@ const schema = z.object({
 });
 
 /** Machine-to-machine, sementara: membuat pasien uji dan langsung menerbitkan token pasien, selama data pasien Edelweiss belum terhubung.
- *  Field yang kosong dibuat otomatis. `no_rm` yang sudah ada ditolak (409). */
+ *  Field yang kosong dibuat otomatis. `no_rm` yang sudah ada ditolak (409). Mati (404) kecuali env `ALLOW_PASIEN_UJI=1`. */
 export async function POST(req: Request) {
   try {
+    if (process.env.ALLOW_PASIEN_UJI !== "1") throw new ApiError(404, "TIDAK_DITEMUKAN", "Data tidak ditemukan.");
     wajibKunciApi(req);
     const teks = (await req.text()).trim();
     let isi: unknown = {};
