@@ -1,0 +1,2342 @@
+{
+  "info": {
+    "name": "Tabulin API",
+    "description": "57 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "A. Admin (sesi cookie)",
+      "item": [
+        {
+          "name": "Sesi dan sistem",
+          "item": [
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ],
+                  "query": []
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Cookie `tabulin_session` disimpan otomatis oleh Postman. Batas 5 gagal per email per 15 menit."
+              }
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "logout"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Health",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "health"
+                  ],
+                  "query": []
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pendaftaran dan keuangan",
+          "item": [
+            {
+              "name": "Daftar pendaftaran",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Buat pendaftaran manual",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"no_rm\": \"RM-0001\",\n  \"faskes_id\": 1,\n  \"cara_persalinan\": \"normal\",\n  \"kelas_kamar\": \"kelas_1\",\n  \"jumlah_cicilan\": 6,\n  \"hpht\": \"2026-09-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Detail pendaftaran",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Setujui",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/setujui",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "setujui"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Tolak",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/tolak",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "tolak"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"alasan\": \"Data tidak lengkap\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Kedaluwarsa",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/kedaluwarsa",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "kedaluwarsa"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Pasang VA",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/pasang-va",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "pasang-va"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"no_va\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "`no_va` 16 digit; kosong = dibuat otomatis."
+              }
+            },
+            {
+              "name": "Terbitkan tagihan bulanan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/tagihan",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "tagihan"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"periode\": \"2026-12\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "`periode` YYYY-MM, opsional."
+              }
+            },
+            {
+              "name": "Konfirmasi setoran manual",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/setoran",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "setoran"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tanggal_bayar\": \"2026-11-24\",\n  \"nominal\": 1000000,\n  \"kanal_id\": 1,\n  \"tagihan_id\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "`kanal_id` harus metode aktif berjenis transfer_manual/tunai. Tanggal harus sebelum hari ini (H+1)."
+              }
+            },
+            {
+              "name": "Tandai selesai",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/selesai",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pendaftaran",
+                    "{{pendaftaran_id}}",
+                    "selesai"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Kirim pengingat tagihan",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/tagihan/{{tagihan_id}}/pengingat",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "tagihan",
+                    "{{tagihan_id}}",
+                    "pengingat"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Koreksi transaksi",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/transaksi/{{transaksi_id}}/koreksi",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transaksi",
+                    "{{transaksi_id}}",
+                    "koreksi"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"alasan\": \"Salah input\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Klaim pembayaran (K9)",
+          "item": [
+            {
+              "name": "Tolak klaim",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/klaim/{{klaim_id}}/tolak",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "klaim",
+                    "{{klaim_id}}",
+                    "tolak"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"alasan\": \"Bukti tidak jelas\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Lihat bukti klaim (berkas)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/klaim/{{klaim_id}}/berkas",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "klaim",
+                    "{{klaim_id}}",
+                    "berkas"
+                  ],
+                  "query": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Data master dan aturan",
+          "item": [
+            {
+              "name": "Tambah cara persalinan",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/master/cara",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "master",
+                    "cara"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nama\": \"Normal\",\n  \"harga\": {\n    \"1\": 10000000\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "`harga` = map id faskes → harga."
+              }
+            },
+            {
+              "name": "Tambah kelas kamar",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/master/kelas",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "master",
+                    "kelas"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nama\": \"Kelas 1\",\n  \"tier\": \"Saving+ Premium\",\n  \"setoran_min_bulanan\": 500000,\n  \"harga\": {\n    \"1\": 3000000\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "tier: `Saving+ Premium` atau `Saving+ Essential`."
+              }
+            },
+            {
+              "name": "Ubah master",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/master/cara/{{master_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "master",
+                    "cara",
+                    "{{master_id}}"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nama\": \"Normal\",\n  \"aktif\": true,\n  \"harga\": {\n    \"1\": 10000000\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Tambah faskes",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/faskes",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "faskes"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"kode\": \"BDG\",\n  \"nama\": \"RS Edelweiss Bandung\",\n  \"alamat\": \"\",\n  \"no_telepon\": \"\",\n  \"email\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ubah faskes",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/faskes/{{faskes_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "faskes",
+                    "{{faskes_id}}"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nama\": \"RS Edelweiss\",\n  \"aktif\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ubah konfigurasi",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/konfigurasi/dp_persen",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "konfigurasi",
+                    "dp_persen"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nilai\": 20\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Kunci: dp_persen, target_persen, milestone_minggu, hpl_minggu, batas_usia_kehamilan_hari, hari_jatuh_tempo, hari_tempo_dp, toleransi_hari, fitur_klaim_aktif."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pembayaran dan notifikasi",
+          "item": [
+            {
+              "name": "Tambah metode (kanal)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/kanal",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "kanal"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"kode\": \"bca_va\",\n  \"nama\": \"BCA Virtual Account\",\n  \"deskripsi\": \"\",\n  \"jenis\": \"va\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ubah metode",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/kanal/{{kanal_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "kanal",
+                    "{{kanal_id}}"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nama\": \"BCA VA\",\n  \"aktif\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Urutan metode",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/kanal/urutan",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "kanal",
+                    "urutan"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ids\": [\n    1,\n    2,\n    3\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Urutan instruksi",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/instruksi/urutan",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "instruksi",
+                    "urutan"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"kanal_id\": 1,\n  \"ids\": [\n    1,\n    2\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Logo metode: lihat",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/kanal/{{kanal_id}}/logo",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "kanal",
+                    "{{kanal_id}}",
+                    "logo"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Logo metode: unggah",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/kanal/{{kanal_id}}/logo",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "kanal",
+                    "{{kanal_id}}",
+                    "logo"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "description": "PNG/JPG/WebP maks 512 KB."
+              }
+            },
+            {
+              "name": "Logo metode: hapus",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/kanal/{{kanal_id}}/logo",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "kanal",
+                    "{{kanal_id}}",
+                    "logo"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Tambah instruksi",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/instruksi",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "instruksi"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"kanal_id\": 1,\n  \"judul\": \"Transfer via ATM\",\n  \"isi\": \"Langkah 1 ...\",\n  \"nama_bank\": \"BCA\",\n  \"nama_rekening\": \"RS Edelweiss\",\n  \"nomor_rekening\": \"1234567890\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ubah instruksi",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pembayaran/instruksi/{{instruksi_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pembayaran",
+                    "instruksi",
+                    "{{instruksi_id}}"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"judul\": \"Transfer via ATM\",\n  \"isi\": \"Langkah baru\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ubah templat notifikasi",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/templat/{{templat_kode}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "templat",
+                    "{{templat_kode}}"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"judul\": \"Judul\",\n  \"isi\": \"Isi\",\n  \"aktif\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pengguna",
+          "item": [
+            {
+              "name": "Daftar pengguna",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/pengguna",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pengguna"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Buat pengguna",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pengguna",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pengguna"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"baru@example.com\",\n  \"nama\": \"Nama Baru\",\n  \"peran\": \"keuangan\",\n  \"password\": \"minimal-10-karakter\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Ubah pengguna",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/pengguna/{{pengguna_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "pengguna",
+                    "{{pengguna_id}}"
+                  ],
+                  "query": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"aktif\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hapus",
+          "item": [
+            {
+              "name": "Hapus entitas",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/hapus/kanal/{{entitas_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "hapus",
+                    "kanal",
+                    "{{entitas_id}}"
+                  ],
+                  "query": []
+                },
+                "description": "entitas: pengguna, templat, kanal, instruksi, faskes, cara, kelas."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ekspor dan impor",
+          "item": [
+            {
+              "name": "Ekspor CSV",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/ekspor/pendaftaran",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "ekspor",
+                    "pendaftaran"
+                  ],
+                  "query": [
+                    {
+                      "key": "format",
+                      "value": "csv",
+                      "disabled": false
+                    },
+                    {
+                      "key": "q",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "dataset: pendaftaran, pasien, tagihan, setoran, jadwal-cicilan, notifikasi, log-api, audit."
+              }
+            },
+            {
+              "name": "Ekspor PDF",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/ekspor/tagihan?format=pdf",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "ekspor",
+                    "tagihan"
+                  ],
+                  "query": [
+                    {
+                      "key": "format",
+                      "value": "pdf"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Templat impor",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/impor/pendaftaran/templat",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "impor",
+                    "pendaftaran",
+                    "templat"
+                  ],
+                  "query": []
+                }
+              }
+            },
+            {
+              "name": "Impor pendaftaran (periksa saja)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/impor/pendaftaran?periksa=1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "impor",
+                    "pendaftaran"
+                  ],
+                  "query": [
+                    {
+                      "key": "periksa",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Unduh kuitansi (admin)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/transaksi/{{transaksi_id}}/bukti",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "transaksi",
+                    "{{transaksi_id}}",
+                    "bukti"
+                  ],
+                  "query": []
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "B. Mesin ke mesin (Bearer INTEGRATION_API_KEY)",
+      "item": [
+        {
+          "name": "Buat pasien uji + token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/pasien",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "pasien"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sementara, sampai data pasien Edelweiss terhubung. Body boleh kosong atau diisi sebagian: no_rm, nama, no_hp (yang kosong dibuat otomatis). no_rm yang sudah ada: 409. Token dan no_rm disimpan otomatis ke variabel collection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.access_token) { pm.collectionVariables.set(\"patient_token\", j.data.access_token); pm.collectionVariables.set(\"no_rm\", j.data.no_rm); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token pasien",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "token"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"no_rm\": \"{{no_rm}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Menyimpan token ke variabel `patient_token` otomatis."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.access_token) pm.collectionVariables.set(\"patient_token\", j.data.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Terima setoran",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/setoran",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "setoran"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"no_va\": \"{{no_va}}\",\n  \"referensi\": \"REF-{{$timestamp}}\",\n  \"tanggal_bayar\": \"2026-11-24\",\n  \"nominal\": 1000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Idempotent pada `referensi`. `nomor_tagihan` opsional."
+          }
+        },
+        {
+          "name": "Notifikasi Midtrans",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/midtrans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "midtrans"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"INV-0004-03-xxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Webhook Faspay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Gateway-Timestamp",
+                "value": "{{$timestamp}}"
+              },
+              {
+                "key": "X-Gateway-Signature",
+                "value": "v1=<hmac>"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/faspay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "faspay"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_type\": \"transaction.succeeded\",\n  \"transaction\": {\n    \"transaction_id\": \"trx-1\",\n    \"merchant_reference\": \"INV-0004-03-xxxxxxxx\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Signature = `v1=` + hex HMAC-SHA256(FASPAY_WEBHOOK_SECRET, `<timestamp>.<body mentah>`). Hitung manual."
+          }
+        },
+        {
+          "name": "Instruksi pembayaran aktif",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/instruksi",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "instruksi"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "C. Aplikasi pasien /api/v1 (Bearer token pasien)",
+      "item": [
+        {
+          "name": "E-01 Program",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/program",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "program"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-02 Paket",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "kode_faskes",
+                  "value": "{{kode_faskes}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-03 Simulasi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/simulations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "simulations"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"normal\",\n  \"kode_kelas_kamar\": \"kelas_1\",\n  \"hpht\": \"2026-09-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E-04 Daftar program",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/enrollments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "enrollments"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"normal\",\n  \"kode_kelas_kamar\": \"kelas_1\",\n  \"hpht\": \"2026-09-01\",\n  \"no_hp\": \"081234567890\",\n  \"persetujuan_disetujui\": true,\n  \"versi_persetujuan\": \"<ambil dari E-01>\",\n  \"jenis_rencana\": \"minimum\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E-05 Pendaftaran saya",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/enrollments/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "enrollments",
+                "me"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-06 Daftar tagihan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills?kelompok=semua",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills"
+              ],
+              "query": [
+                {
+                  "key": "kelompok",
+                  "value": "semua"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-07 Detail tagihan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{nomor_tagihan}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{nomor_tagihan}}"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Checkout Midtrans (VA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{nomor_tagihan}}/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{nomor_tagihan}}",
+                "checkout"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bank\": \"bca\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "bank: bca, bni, bri, cimb, permata. Di luar kontrak."
+          }
+        },
+        {
+          "name": "Checkout Faspay (kanal gateway)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{nomor_tagihan}}/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{nomor_tagihan}}",
+                "checkout"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kanal\": \"bca_va\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E-08 Buku besar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/ledger",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "jenis_transaksi",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "bulan",
+                  "value": "2026-11",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-09 Kuitansi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/receipt?id_transaksi={{nomor_transaksi}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "receipt"
+              ],
+              "query": [
+                {
+                  "key": "id_transaksi",
+                  "value": "{{nomor_transaksi}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-09 Kuitansi PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/receipt/{{nomor_transaksi}}/pdf?token={{receipt_token}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "receipt",
+                "{{nomor_transaksi}}",
+                "pdf"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{receipt_token}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "E-10 Daftar perangkat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token_fcm\": \"fcm-token\",\n  \"platform\": \"android\",\n  \"id_perangkat\": \"device-1\",\n  \"versi_aplikasi\": \"1.0.0\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E-14 Lepas perangkat",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/{{id_perangkat}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                "{{id_perangkat}}"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-11 Notifikasi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-12 Tandai dibaca",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"semua\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E-13 Lapor transfer (butuh fitur_klaim_aktif)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-claims",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payment-claims"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "id_tagihan",
+                  "value": "{{nomor_tagihan}}",
+                  "type": "text"
+                },
+                {
+                  "key": "nominal_transfer",
+                  "value": "1000000",
+                  "type": "text"
+                },
+                {
+                  "key": "tanggal_transfer",
+                  "value": "2026-11-24",
+                  "type": "text"
+                },
+                {
+                  "key": "bank_asal",
+                  "value": "BCA",
+                  "type": "text"
+                },
+                {
+                  "key": "nama_pengirim",
+                  "value": "Nama Pengirim",
+                  "type": "text"
+                },
+                {
+                  "key": "file_bukti",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "E-15 Daftar klaim",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-claims",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payment-claims"
+              ],
+              "query": [
+                {
+                  "key": "id_tagihan",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status_klaim",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "admin_email",
+      "value": ""
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    },
+    {
+      "key": "integration_api_key",
+      "value": ""
+    },
+    {
+      "key": "patient_token",
+      "value": ""
+    },
+    {
+      "key": "no_rm",
+      "value": ""
+    },
+    {
+      "key": "no_va",
+      "value": ""
+    },
+    {
+      "key": "kode_faskes",
+      "value": ""
+    },
+    {
+      "key": "nomor_tagihan",
+      "value": ""
+    },
+    {
+      "key": "nomor_transaksi",
+      "value": ""
+    },
+    {
+      "key": "receipt_token",
+      "value": ""
+    },
+    {
+      "key": "pendaftaran_id",
+      "value": "1"
+    },
+    {
+      "key": "tagihan_id",
+      "value": "1"
+    },
+    {
+      "key": "transaksi_id",
+      "value": "1"
+    },
+    {
+      "key": "klaim_id",
+      "value": "1"
+    },
+    {
+      "key": "master_id",
+      "value": "1"
+    },
+    {
+      "key": "faskes_id",
+      "value": "1"
+    },
+    {
+      "key": "kanal_id",
+      "value": "1"
+    },
+    {
+      "key": "instruksi_id",
+      "value": "1"
+    },
+    {
+      "key": "templat_kode",
+      "value": ""
+    },
+    {
+      "key": "pengguna_id",
+      "value": "1"
+    },
+    {
+      "key": "entitas_id",
+      "value": "1"
+    },
+    {
+      "key": "id_perangkat",
+      "value": ""
+    }
+  ]
+}
