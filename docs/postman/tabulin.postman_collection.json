@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tabulin API",
-    "description": "58 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.",
+    "description": "58 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.\n\nUrutan jalan grup C (Collection Runner): Buat pasien uji + token (grup B) → E-01 → E-02 → E-03 → E-04 → E-05 … Variabel (`kode_faskes`, `nomor_tagihan`, `nomor_transaksi`, `receipt_token`, dll.) terisi otomatis dari respons sebelumnya; request yang butuh variabel kosong dilaporkan galat dengan pesan jelas (request tetap terkirim, jadi abaikan hasilnya sampai variabelnya terisi). Tiap request punya assertion status.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1319,8 +1319,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test(\"Status 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
                   "const j = pm.response.json();",
-                  "if (j.data && j.data.access_token) { pm.collectionVariables.set(\"patient_token\", j.data.access_token); pm.collectionVariables.set(\"no_rm\", j.data.no_rm); }"
+                  "if (j.data && j.data.access_token) { simpan(\"patient_token\", j.data.access_token); if (j.data.no_rm) simpan(\"no_rm\", j.data.no_rm); }"
                 ]
               }
             }
@@ -1355,7 +1357,19 @@
               ]
             },
             "description": "Sementara, sama seperti 'Buat pasien uji + token': mati (404) kecuali env ALLOW_PASIEN_UJI=1. Ganti variabel no_rm sesuai pasien."
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Token pasien",
@@ -1398,7 +1412,7 @@
                 }
               }
             },
-            "description": "Menyimpan token ke variabel `patient_token` otomatis."
+            "description": "Menyimpan token ke variabel `patient_token` (juga ke environment aktif). Body: `{\"no_rm\": \"<no_rm yang sudah ada>\"}`."
           },
           "event": [
             {
@@ -1406,8 +1420,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
                   "const j = pm.response.json();",
-                  "if (j.data && j.data.access_token) pm.collectionVariables.set(\"patient_token\", j.data.access_token);"
+                  "if (j.data && j.data.access_token) { simpan(\"patient_token\", j.data.access_token); if (j.data.no_rm) simpan(\"no_rm\", j.data.no_rm); }"
                 ]
               }
             }
@@ -1455,7 +1471,19 @@
               }
             },
             "description": "Idempotent pada `referensi`. `nomor_tagihan` opsional."
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Notifikasi Midtrans",
@@ -1598,8 +1626,23 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "Mengisi `versi_persetujuan` untuk E-04."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "if (j.versi_persetujuan) simpan(\"versi_persetujuan\", j.versi_persetujuan);"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-02 Paket",
@@ -1633,8 +1676,25 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "Mengisi `kode_faskes`, `kode_cara_persalinan`, `kode_kelas_kamar` dari paket pertama, dipakai E-03 dan E-04."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const p = (j.paket || [])[0];",
+                  "if (p) { simpan(\"kode_faskes\", p.kode_faskes); simpan(\"kode_cara_persalinan\", p.kode_cara_persalinan); simpan(\"kode_kelas_kamar\", p.kode_kelas_kamar); }",
+                  "pm.test(\"Ada paket\", () => pm.expect(p).to.exist);"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-03 Simulasi",
@@ -1670,14 +1730,37 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"normal\",\n  \"kode_kelas_kamar\": \"kelas_1\",\n  \"hpht\": \"2026-09-01\"\n}",
+              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"{{kode_cara_persalinan}}\",\n  \"kode_kelas_kamar\": \"{{kode_kelas_kamar}}\",\n  \"hpht\": \"2026-09-01\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"kode_faskes\")) throw new Error(\"Variabel kode_faskes kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"kode_cara_persalinan\")) throw new Error(\"Variabel kode_cara_persalinan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"kode_kelas_kamar\")) throw new Error(\"Variabel kode_kelas_kamar kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "E-04 Daftar program",
@@ -1717,14 +1800,39 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"normal\",\n  \"kode_kelas_kamar\": \"kelas_1\",\n  \"hpht\": \"2026-09-01\",\n  \"no_hp\": \"081234567890\",\n  \"persetujuan_disetujui\": true,\n  \"versi_persetujuan\": \"<ambil dari E-01>\",\n  \"jenis_rencana\": \"minimum\"\n}",
+              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"{{kode_cara_persalinan}}\",\n  \"kode_kelas_kamar\": \"{{kode_kelas_kamar}}\",\n  \"hpht\": \"2026-09-01\",\n  \"no_hp\": \"081234567890\",\n  \"persetujuan_disetujui\": true,\n  \"versi_persetujuan\": \"{{versi_persetujuan}}\",\n  \"jenis_rencana\": \"minimum\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
+            },
+            "description": "Jalankan E-01 dan E-02 dulu. Membuat pendaftaran sungguhan; status awal `menunggu_verifikasi`."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"kode_faskes\")) throw new Error(\"Variabel kode_faskes kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"kode_cara_persalinan\")) throw new Error(\"Variabel kode_cara_persalinan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"kode_kelas_kamar\")) throw new Error(\"Variabel kode_kelas_kamar kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"versi_persetujuan\")) throw new Error(\"Variabel versi_persetujuan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 atau 201\", () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-05 Pendaftaran saya",
@@ -1754,7 +1862,19 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "E-06 Daftar tagihan",
@@ -1787,8 +1907,24 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "Mengisi `nomor_tagihan` dari tagihan pertama (kosong bila pasien belum punya tagihan: pendaftaran harus disetujui, VA dipasang, lalu tagihan terbit lewat panel admin)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const t = (j.items || [])[0];",
+                  "if (t) simpan(\"nomor_tagihan\", t.id_tagihan);"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-07 Detail tagihan",
@@ -1818,7 +1954,28 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_tagihan\")) throw new Error(\"Variabel nomor_tagihan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Checkout Midtrans (VA)",
@@ -1864,7 +2021,28 @@
               }
             },
             "description": "bank: bca, bni, bri, cimb, permata. Di luar kontrak."
-          }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_tagihan\")) throw new Error(\"Variabel nomor_tagihan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Checkout Faspay (kanal gateway)",
@@ -1909,7 +2087,28 @@
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_tagihan\")) throw new Error(\"Variabel nomor_tagihan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "E-08 Buku besar",
@@ -1953,8 +2152,24 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "Mengisi `nomor_transaksi` dari transaksi terbaru (kosong bila belum ada setoran)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const t = (j.items || [])[0];",
+                  "if (t) simpan(\"nomor_transaksi\", t.id_transaksi);"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-09 Kuitansi",
@@ -1987,8 +2202,34 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "Mengisi `receipt_token` dari `url_bukti_pdf` (berlaku 15 menit)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_transaksi\")) throw new Error(\"Variabel nomor_transaksi kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const m = /[?&]token=([^&]+)/.exec(j.url_bukti_pdf || \"\");",
+                  "if (m) simpan(\"receipt_token\", m[1]);",
+                  "pm.test(\"Ada token PDF\", () => pm.expect(m).to.exist);"
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-09 Kuitansi PDF",
@@ -2016,8 +2257,31 @@
             },
             "auth": {
               "type": "noauth"
+            },
+            "description": "Jalankan E-09 Kuitansi dulu. Tanpa Bearer, token ada di URL."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_transaksi\")) throw new Error(\"Variabel nomor_transaksi kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"receipt_token\")) throw new Error(\"Variabel receipt_token kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-10 Daftar perangkat",
@@ -2060,7 +2324,19 @@
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "E-14 Lepas perangkat",
@@ -2089,8 +2365,30 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "`id_perangkat` sama dengan yang didaftarkan di E-10 (bawaan `device-1`)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"id_perangkat\")) throw new Error(\"Variabel id_perangkat kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.expect([204]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-11 Notifikasi",
@@ -2119,7 +2417,19 @@
                 }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "E-12 Tandai dibaca",
@@ -2162,7 +2472,19 @@
                 }
               }
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "E-13 Lapor transfer (butuh fitur_klaim_aktif)",
@@ -2230,8 +2552,30 @@
                   "src": []
                 }
               ]
+            },
+            "description": "Pilih file bukti di field `file_bukti` (tidak bisa disimpan di collection). 403 `FITUR_TIDAK_AKTIF` diterima: fitur klaim mati secara default."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_tagihan\")) throw new Error(\"Variabel nomor_tagihan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 atau 403\", () => pm.expect([201, 403]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
             }
-          }
+          ]
         },
         {
           "name": "E-15 Daftar klaim",
@@ -2270,8 +2614,21 @@
                   "type": "string"
                 }
               ]
+            },
+            "description": "403 `FITUR_TIDAK_AKTIF` adalah perilaku yang benar bila `fitur_klaim_aktif`=0 (bawaan)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 atau 403\", () => pm.expect([200, 403]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -2367,6 +2724,18 @@
     },
     {
       "key": "id_perangkat",
+      "value": "device-1"
+    },
+    {
+      "key": "kode_cara_persalinan",
+      "value": ""
+    },
+    {
+      "key": "kode_kelas_kamar",
+      "value": ""
+    },
+    {
+      "key": "versi_persetujuan",
       "value": ""
     }
   ]
