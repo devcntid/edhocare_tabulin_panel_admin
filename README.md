@@ -21,6 +21,8 @@ Login seed (password = `SEED_ADMIN_PASSWORD`): `admin@tabulin.local` (super admi
 
 `npm run db:reset` menghapus schema (hanya host localhost), lalu jalankan `db:migrate` dan `db:seed` lagi.
 
+**Deploy Vercel:** skrip `vercel-build` menjalankan `db:migrate` sebelum `next build`, hanya bila `VERCEL_ENV=production` (preview dilewati). `DATABASE_URL` harus tersedia di environment Production Vercel untuk tahap build; `MIGRATE_DATABASE_URL` (opsional) dipakai bila migrasi butuh koneksi lain. Bila migrasi gagal, build gagal dan deploy lama tetap berjalan. Migrasi berjalan sebelum kode baru aktif, jadi tulis migrasi yang kompatibel dengan kode lama (tambah kolom/tabel, jangan hapus atau ganti nama dulu).
+
 ## Integrasi: setoran dari API
 Setoran tidak diinput admin; aplikasi/API bank melaporkannya (idempoten per `referensi`):
 ```bash
