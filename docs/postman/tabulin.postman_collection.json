@@ -2631,6 +2631,1009 @@
           ]
         }
       ]
+    },
+    {
+      "name": "D. Alur uji end-to-end (jalankan berurutan)",
+      "description": "Satu pasien baru dari nol sampai setoran DP masuk dan kuitansi terbit: daftar (pasien) → setujui dan pasang VA (admin) → setoran bank (integrasi) → kuitansi (pasien). Jalankan folder ini lewat Collection Runner / `newman run --folder \"D. ...\" --bail` dengan environment yang berisi `base_url`, `integration_api_key`, `admin_email`, `admin_password`. Server harus punya `ALLOW_PASIEN_UJI=1`. Checkout gateway (Midtrans/Faspay) sengaja tidak disertakan karena memanggil gateway sandbox sungguhan; jalankan manual dari grup C setelah langkah 11.",
+      "item": [
+        {
+          "name": "01 [Integrasi] Buat pasien uji + token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/pasien",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "pasien"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Butuh `ALLOW_PASIEN_UJI=1` di server. Membuat pasien baru dengan no_rm acak; `patient_token` dan `no_rm` tersimpan otomatis."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.access_token) { simpan(\"patient_token\", j.data.access_token); if (j.data.no_rm) simpan(\"no_rm\", j.data.no_rm); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 [Pasien] E-01 Program",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/program",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "program"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Mengisi `versi_persetujuan` untuk E-04."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "if (j.versi_persetujuan) simpan(\"versi_persetujuan\", j.versi_persetujuan);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 [Pasien] E-02 Paket",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "packages"
+              ],
+              "query": [
+                {
+                  "key": "kode_faskes",
+                  "value": "{{kode_faskes}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Mengisi `kode_faskes`, `kode_cara_persalinan`, `kode_kelas_kamar` dari paket pertama, dipakai E-03 dan E-04."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const p = (j.paket || [])[0];",
+                  "if (p) { simpan(\"kode_faskes\", p.kode_faskes); simpan(\"kode_cara_persalinan\", p.kode_cara_persalinan); simpan(\"kode_kelas_kamar\", p.kode_kelas_kamar); }",
+                  "pm.test(\"Ada paket\", () => pm.expect(p).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 [Pasien] E-04 Daftar program",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/enrollments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "enrollments"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kode_faskes\": \"{{kode_faskes}}\",\n  \"kode_cara_persalinan\": \"{{kode_cara_persalinan}}\",\n  \"kode_kelas_kamar\": \"{{kode_kelas_kamar}}\",\n  \"hpht\": \"2026-09-01\",\n  \"no_hp\": \"081234567890\",\n  \"persetujuan_disetujui\": true,\n  \"versi_persetujuan\": \"{{versi_persetujuan}}\",\n  \"jenis_rencana\": \"minimum\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Pasien mendaftar; status awal `menunggu_verifikasi`."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"kode_faskes\")) throw new Error(\"Variabel kode_faskes kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"kode_cara_persalinan\")) throw new Error(\"Variabel kode_cara_persalinan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"kode_kelas_kamar\")) throw new Error(\"Variabel kode_kelas_kamar kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"versi_persetujuan\")) throw new Error(\"Variabel versi_persetujuan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 atau 201\", () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 [Admin] Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Perlu peran super_admin (langkah 07 butuh izin verifikasi, langkah 08 dan 10 butuh keuangan). Cookie sesi disimpan otomatis. Isi `admin_email` dan `admin_password` di environment."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"admin_email\")) throw new Error(\"Variabel admin_email kosong: jalankan langkah sebelumnya dulu.\");",
+                  "if (!pm.variables.get(\"admin_password\")) throw new Error(\"Variabel admin_password kosong: jalankan langkah sebelumnya dulu.\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 [Admin] Cari pendaftaran pasien",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pendaftaran?q={{no_rm}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pendaftaran"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{no_rm}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Mencari berdasarkan `no_rm`; menyimpan `pendaftaran_id`."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"no_rm\")) throw new Error(\"Variabel no_rm kosong: jalankan langkah sebelumnya dulu.\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const r = (pm.response.json().data || {}).rows || [];",
+                  "pm.test(\"Pendaftaran ditemukan\", () => pm.expect(r.length).to.be.above(0));",
+                  "if (r[0]) simpan(\"pendaftaran_id\", String(r[0].id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 [Admin] Setujui pendaftaran",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/setujui",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pendaftaran",
+                "{{pendaftaran_id}}",
+                "setujui"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "menunggu_verifikasi → va_disiapkan."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"pendaftaran_id\")) throw new Error(\"Variabel pendaftaran_id kosong: jalankan langkah sebelumnya dulu.\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 [Admin] Pasang VA + terbit tagihan DP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}/pasang-va",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pendaftaran",
+                "{{pendaftaran_id}}",
+                "pasang-va"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "`no_va` kosong = dibuat otomatis. Status menjadi `aktif` dan tagihan DP terbit."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"pendaftaran_id\")) throw new Error(\"Variabel pendaftaran_id kosong: jalankan langkah sebelumnya dulu.\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 [Admin] Detail pendaftaran (ambil no_va dan nominal DP)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pendaftaran",
+                "{{pendaftaran_id}}"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Menyimpan `no_va`, `nominal_dp`, dan `nomor_tagihan` dari tagihan pertama."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"pendaftaran_id\")) throw new Error(\"Variabel pendaftaran_id kosong: jalankan langkah sebelumnya dulu.\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const d = pm.response.json().data || {};",
+                  "const t = (d.tagihan || [])[0];",
+                  "pm.test(\"Status aktif\", () => pm.expect((d.pendaftaran || {}).status_pendaftaran).to.eql(\"aktif\"));",
+                  "pm.test(\"Tagihan DP terbit\", () => pm.expect(t).to.exist);",
+                  "if (d.pendaftaran) simpan(\"no_va\", d.pendaftaran.no_va);",
+                  "if (t) { simpan(\"nominal_dp\", String(t.nominal)); simpan(\"nomor_tagihan\", t.nomor); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 [Pasien] E-06 Daftar tagihan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills?kelompok=semua",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills"
+              ],
+              "query": [
+                {
+                  "key": "kelompok",
+                  "value": "semua"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Mengisi `nomor_tagihan` dari tagihan pertama (kosong bila pasien belum punya tagihan: pendaftaran harus disetujui, VA dipasang, lalu tagihan terbit lewat panel admin)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const t = (j.items || [])[0];",
+                  "if (t) simpan(\"nomor_tagihan\", t.id_tagihan);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 [Pasien] E-07 Detail tagihan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{nomor_tagihan}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{nomor_tagihan}}"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_tagihan\")) throw new Error(\"Variabel nomor_tagihan kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 [Integrasi] Terima setoran DP (simulasi bank)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/integrasi/setoran",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "integrasi",
+                "setoran"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{integration_api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"no_va\": \"{{no_va}}\",\n  \"referensi\": \"E2E-{{$timestamp}}\",\n  \"tanggal_bayar\": \"{{tanggal_hari_ini}}\",\n  \"nominal\": {{nominal_dp}},\n  \"nomor_tagihan\": \"{{nomor_tagihan}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Nominal = DP tagihan. `referensi` unik per jalan, jadi aman diulang. Setoran masuk hanya lewat endpoint ini (bukan input admin)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"no_va\")) throw new Error(\"Variabel no_va kosong: jalankan langkah sebelumnya dulu.\");",
+                  "if (!pm.variables.get(\"nominal_dp\")) throw new Error(\"Variabel nominal_dp kosong: jalankan langkah sebelumnya dulu.\");",
+                  "if (!pm.variables.get(\"nomor_tagihan\")) throw new Error(\"Variabel nomor_tagihan kosong: jalankan langkah sebelumnya dulu.\");",
+                  "pm.collectionVariables.set(\"tanggal_hari_ini\", new Date().toISOString().slice(0, 10));",
+                  "if (pm.environment.name) pm.environment.set(\"tanggal_hari_ini\", new Date().toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.expect([201]).to.include(pm.response.code));",
+                  "pm.test(\"Setoran baru\", () => pm.expect((pm.response.json().data || {}).baru).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 [Pasien] E-08 Buku besar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/ledger",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ledger"
+              ],
+              "query": [
+                {
+                  "key": "jenis_transaksi",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "bulan",
+                  "value": "2026-11",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Mengisi `nomor_transaksi` dari transaksi terbaru (kosong bila belum ada setoran)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const t = (j.items || [])[0];",
+                  "if (t) simpan(\"nomor_transaksi\", t.id_transaksi);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 [Pasien] E-09 Kuitansi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/receipt?id_transaksi={{nomor_transaksi}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "receipt"
+              ],
+              "query": [
+                {
+                  "key": "id_transaksi",
+                  "value": "{{nomor_transaksi}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Mengisi `receipt_token` dari `url_bukti_pdf` (berlaku 15 menit)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_transaksi\")) throw new Error(\"Variabel nomor_transaksi kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const simpan = (k, v) => { pm.collectionVariables.set(k, v); if (pm.environment.name) pm.environment.set(k, v); };",
+                  "const j = pm.response.json();",
+                  "const m = /[?&]token=([^&]+)/.exec(j.url_bukti_pdf || \"\");",
+                  "if (m) simpan(\"receipt_token\", m[1]);",
+                  "pm.test(\"Ada token PDF\", () => pm.expect(m).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 [Pasien] E-09 Kuitansi PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/receipt/{{nomor_transaksi}}/pdf?token={{receipt_token}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "receipt",
+                "{{nomor_transaksi}}",
+                "pdf"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{receipt_token}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Jalankan E-09 Kuitansi dulu. Tanpa Bearer, token ada di URL."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"nomor_transaksi\")) throw new Error(\"Variabel nomor_transaksi kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");",
+                  "if (!pm.variables.get(\"receipt_token\")) throw new Error(\"Variabel receipt_token kosong: jalankan request pengisinya dulu (lihat deskripsi request).\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16 [Pasien] E-05 Pendaftaran saya (harus aktif)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/enrollments/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "enrollments",
+                "me"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "pm.test(\"Status aktif\", () => pm.expect(pm.response.json().status_pendaftaran).to.eql(\"aktif\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17 [Pasien] E-11 Notifikasi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 [Admin] Detail pendaftaran (cek saldo dan transaksi)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pendaftaran/{{pendaftaran_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pendaftaran",
+                "{{pendaftaran_id}}"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Verifikasi akhir: ada satu transaksi dan saldo = nominal DP."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"pendaftaran_id\")) throw new Error(\"Variabel pendaftaran_id kosong: jalankan langkah sebelumnya dulu.\");",
+                  "if (!pm.variables.get(\"nominal_dp\")) throw new Error(\"Variabel nominal_dp kosong: jalankan langkah sebelumnya dulu.\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.expect([200]).to.include(pm.response.code));",
+                  "const d = pm.response.json().data || {};",
+                  "pm.test(\"Ada 1 transaksi\", () => pm.expect((d.transaksi || []).length).to.eql(1));",
+                  "pm.test(\"Saldo = nominal DP\", () => pm.expect(Number((d.pendaftaran || {}).saldo)).to.eql(Number(pm.variables.get(\"nominal_dp\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19 [Admin] Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ],
+              "query": []
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 atau 204\", () => pm.expect([200, 204]).to.include(pm.response.code));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -2736,6 +3739,14 @@
     },
     {
       "key": "versi_persetujuan",
+      "value": ""
+    },
+    {
+      "key": "tanggal_hari_ini",
+      "value": ""
+    },
+    {
+      "key": "nominal_dp",
       "value": ""
     }
   ]
