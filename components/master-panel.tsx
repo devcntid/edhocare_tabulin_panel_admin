@@ -68,7 +68,7 @@ export function MasterBaru({ jenis, faskes }: { jenis: "cara" | "kelas"; faskes:
   const label = jenis === "cara" ? "cara persalinan" : "kelas kamar";
   const reset = () => { setNama(""); setMin(""); setHarga({}); };
   return (
-    <FormDialog tombol={`+ Tambah ${label}`} judul={`Tambah ${label}`} desc="Harga total pendaftaran = harga cara persalinan + harga kelas kamar di faskes yang dipilih." busy={api.busy} galat={galatTeks(api)} onBatal={reset}
+    <FormDialog tombol={`+ Tambah ${label}`} judul={`Tambah ${label}`} desc="Tarif total paket = harga cara persalinan + harga kelas kamar di faskes yang dipilih, kecuali paket itu punya tarif sendiri (menu Tarif paket)." busy={api.busy} galat={galatTeks(api)} onBatal={reset}
       onSubmit={async () => {
         const ok = await api.call(`/api/master/${jenis}`, { nama, harga: hargaBody(harga), ...(jenis === "kelas" ? { tier, setoran_min_bulanan: Number(min) } : {}) });
         if (ok) reset();

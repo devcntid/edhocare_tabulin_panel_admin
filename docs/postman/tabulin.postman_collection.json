@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tabulin API",
-    "description": "58 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.\n\nUrutan jalan grup C (Collection Runner): Buat pasien uji + token (grup B) → E-01 → E-02 → E-03 → E-04 → E-05 … Variabel (`kode_faskes`, `nomor_tagihan`, `nomor_transaksi`, `receipt_token`, dll.) terisi otomatis dari respons sebelumnya; request yang butuh variabel kosong dilaporkan galat dengan pesan jelas (request tetap terkirim, jadi abaikan hasilnya sampai variabelnya terisi). Tiap request punya assertion status.",
+    "description": "59 endpoint Tabulin (admin panel, integrasi, aplikasi pasien). Sumber: docs/11-daftar-api.md. Admin memakai cookie sesi (login dulu); integrasi memakai INTEGRATION_API_KEY; pasien memakai token dari 'Token pasien'.\n\nUrutan jalan grup C (Collection Runner): Buat pasien uji + token (grup B) → E-01 → E-02 → E-03 → E-04 → E-05 … Variabel (`kode_faskes`, `nomor_tagihan`, `nomor_transaksi`, `receipt_token`, dll.) terisi otomatis dari respons sebelumnya; request yang butuh variabel kosong dilaporkan galat dengan pesan jelas (request tetap terkirim, jadi abaikan hasilnya sampai variabelnya terisi). Tiap request punya assertion status.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -595,6 +595,43 @@
                     }
                   }
                 }
+              }
+            },
+            {
+              "name": "Ubah tarif paket",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/master/paket",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "master",
+                    "paket"
+                  ],
+                  "query": []
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cara_id\": 1,\n  \"kelas_id\": 1,\n  \"harga\": {\n    \"1\": 16000000,\n    \"2\": 16000000\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Tarif total paket per faskes aktif (id faskes sebagai kunci). `harga: null` menghapus tarif paket sehingga kembali ke harga cara + kelas. Butuh login admin kelola_paket (cookie). Pendaftaran yang sudah ada tidak berubah."
               }
             },
             {
