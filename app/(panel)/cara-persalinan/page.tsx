@@ -13,7 +13,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const h = potong(cara, pageNum(sp.page), perNum(sp.per));
   return (
     <Halaman>
-      <PageHeader title="Cara persalinan" desc="Pilihan cara persalinan beserta harganya di tiap faskes. Total harga pendaftaran = harga cara persalinan + harga kelas kamar. Sembunyikan untuk menghilangkan dari pilihan; yang belum dipakai pendaftaran bisa dihapus." aksi={bisa && <MasterBaru jenis="cara" faskes={f} />} />
+      <PageHeader title="Cara persalinan" desc="Pilihan cara persalinan beserta harganya di tiap faskes. Tarif total paket = harga cara persalinan + harga kelas kamar, kecuali paket itu punya tarif sendiri (lihat Tarif paket). Sembunyikan untuk menghilangkan dari pilihan; yang belum dipakai pendaftaran bisa dihapus." aksi={bisa && <MasterBaru jenis="cara" faskes={f} />} />
       <Table head={["Nama", ...f.map((x) => `Harga ${x.kode}`), "Dipakai", "Status", ...(bisa ? ["Aksi"] : [])]} empty={!cara.length}>
         {h.rows.map((m) => <MasterBaris key={m.id} jenis="cara" m={m} faskes={f} bisa={bisa} />)}
       </Table>

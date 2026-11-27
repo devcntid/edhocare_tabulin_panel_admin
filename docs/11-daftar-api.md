@@ -1,6 +1,6 @@
 # 11 – Daftar API Tabulin
 
-Daftar semua endpoint dan fungsinya. Hanya list dan fungsi, bukan spesifikasi lengkap (skema field ada di kode: `app/api/**/route.ts` dan `lib/services/*`; kontrak aplikasi pasien ada di `07-kontrak-data.md`). Per 2026-11-17, **58 endpoint** dalam 4 kelompok.
+Daftar semua endpoint dan fungsinya. Hanya list dan fungsi, bukan spesifikasi lengkap (skema field ada di kode: `app/api/**/route.ts` dan `lib/services/*`; kontrak aplikasi pasien ada di `07-kontrak-data.md`). Per 2026-11-17, **59 endpoint** dalam 4 kelompok.
 
 ## Cara membaca
 
@@ -60,6 +60,7 @@ Izin admin (`lib/permissions.ts`):
 | Method | Path | Fungsi | Izin |
 |---|---|---|---|
 | POST | `/api/master/{jenis}` | Tambah cara persalinan (`jenis=cara`) atau kelas kamar (`jenis=kelas`, dengan `tier` dan `setoran_min_bulanan`), plus `harga` per faskes. | kelola_paket |
+| PATCH | `/api/master/paket` | Ubah tarif total satu paket (`cara_id`, `kelas_id`, `harga` = `{faskes_id: tarif}`) di tiap faskes aktif, atau `harga: null` untuk menghapus tarif paket sehingga tarif kembali dihitung dari harga cara + harga kelas. Tarif paket (tabel `harga_paket`, BRD) didahulukan di katalog (E-02) dan simulasi (E-03); pendaftaran yang sudah ada menyimpan tarifnya sendiri. Tercatat di audit log. Halaman panel: Tarif paket. | kelola_paket |
 | PATCH | `/api/master/{jenis}/{id}` | Ubah nama, tier, setoran minimum, `aktif`, atau harga per faskes. | kelola_paket |
 | POST | `/api/faskes` | Tambah faskes (`kode`, `nama`, alamat, telepon, email). | kelola_paket |
 | PATCH | `/api/faskes/{id}` | Ubah data faskes atau nonaktifkan (kode tidak bisa diubah). | kelola_paket |
